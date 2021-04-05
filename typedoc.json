@@ -1,0 +1,20 @@
+{
+  "name": "Spawnmon",
+  "mode": "modules",
+  "theme": "default",
+  "readme": "README.md",
+  "module": "ESNext",
+  "ignoreCompilerErrors": "true",
+  "experimentalDecorators": "true",
+  "emitDecoratorMetadata": "true",
+  "target": "ESNext",
+  "moduleResolution": "node",
+  "preserveConstEnums": "true",
+  "stripInternal": "true",
+  "suppressExcessPropertyErrors": "true",
+  "suppressImplicitAnyIndexErrors": "true",
+  "exclude": [
+    "**/*+(e2e|spec|debug).ts*",
+    "**/example*"
+  ]
+}

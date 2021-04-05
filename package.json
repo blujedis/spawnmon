@@ -1,0 +1,51 @@
+{
+  "name": "spawnmon",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf dist/",
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "docs": "typedoc ./src --options ./typedoc.json --out ./docs && touch ./docs/.nojekyll",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ansi-colors": "^4.1.1",
+    "emoji-regex": "^9.2.2",
+    "log-symbols": "^4.1.0",
+    "rimraf": "^3.0.2",
+    "string-length": "^4.0.2",
+    "string-width": "^4.2.2",
+    "strip-ansi": "^6.0.0",
+    "wrap-ansi": "^7.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^18.0.0",
+    "@rollup/plugin-node-resolve": "^11.2.1",
+    "@types/node": "^12.0.0",
+    "@types/wrap-ansi": "^3.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.20.0",
+    "@typescript-eslint/parser": "^4.20.0",
+    "eslint": "^7.15.0",
+    "jest": "^26.6.3",
+    "rollup": "^2.34.2",
+    "rollup-plugin-copy": "^3.3.0",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "rollup-plugin-postcss": "^4.0.0",
+    "rollup-plugin-typescript2": "^0.29.0",
+    "ts-jest": "^26.4.4",
+    "tslib": "^2.1.0",
+    "typedoc": "^0.20.35",
+    "typescript": "^4.2.3"
+  }
+}
