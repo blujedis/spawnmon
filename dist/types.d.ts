@@ -1,28 +1,33 @@
 /// <reference types="node" />
+import { SpawnOptions, ProcessEnvOptions } from 'child_process';
 import { StylesType, StyleFunction } from 'ansi-colors';
-import { SpawnOptions, ChildProcess, SpawnSyncOptions, SpawnSyncReturns } from 'child_process';
-import { ApiBase } from './runner';
-export { ApiBase };
-export declare type ApiFor = Omit<ApiBase, 'run' | 'kill'> & {
-    readonly options?: {
-        child?: ChildProcess | SpawnSyncReturns<Buffer>;
-        transform?: TransformHandler;
-        command?: CommandTuple;
-        delay?: number;
-    };
-    child: () => ChildProcess;
-    transform: (handler: TransformHandler) => ApiFor;
-    delay: (delay?: number) => ApiFor;
-    run: (transform?: TransformHandler) => ApiFor;
-    kill: () => void;
-};
-export declare type PingDispatchEvent = 'retry' | 'retried' | 'connected' | 'destroyed';
+import { SocketConstructorOpts } from 'net';
+import { Pinger } from './pinger';
+export declare type TransformHandler = (line: string | Buffer, command?: string, from?: 'stdout' | 'stderr') => string;
+export interface ICommandOptions extends SpawnOptions {
+    command: string;
+    args?: any[];
+    transform?: TransformHandler;
+    prefix?: string;
+    color?: Color;
+    mute?: boolean;
+}
+export interface ISpawnmonOptions extends ProcessEnvOptions {
+    writestream?: NodeJS.WritableStream;
+    transform?: TransformHandler;
+}
+export declare type PingerEvent = keyof IPingerEvents;
+export declare type PingerHandler = (retries?: number, pinger?: Pinger) => void;
+export interface IPingerOptions extends SocketConstructorOpts {
+    host?: string;
+    port?: number;
+    attempts?: number;
+    delay?: number;
+}
+export interface IPingerEvents {
+    connected: PingerHandler[];
+    retry: PingerHandler[];
+    failed: PingerHandler[];
+    destroyed: PingerHandler[];
+}
 export declare type Color = keyof StylesType<StyleFunction>;
-export interface SpawnOptionsExt extends SpawnOptions {
-    writestream?: 'stdout' | 'stderr';
-}
-export interface SpawnOptionsSyncExt extends SpawnSyncOptions {
-    writestream?: 'stdout' | 'stderr';
-}
-export declare type TransformHandler = (chunk: string) => void;
-export declare type CommandTuple = [string, string[]?, SpawnOptionsExt?, TransformHandler?];

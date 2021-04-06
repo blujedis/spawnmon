@@ -1,95 +1,90 @@
 import { Socket, SocketConstructorOpts } from 'net';
-import { PingDispatchEvent } from './types';
+import { PingerEvent, IPingerOptions, IPingerEvents, PingerHandler } from './types';
 
-/**
- * Creates a socket and pings until connected specified tries are exhausted.
- * 
- * @param host the host ping.
- * @param port the port to ping if any.
- * @param cb a callback on connected.
- */
-function pinger(port = 3000, host?: string) {
+export class Pinger {
 
-  host = host || '127.0.0.1';
-  port = port || 3000;
-
-  let _tries = 0;
-  let _client: Socket;
-  let _retries = 0;
-  let _canRetry = true;
-  let _events = {
+  private _events: IPingerEvents = {
     retry: [],
-    retried: [],
+    failed: [],
     connected: [],
     destroyed: []
   };
 
-  const api = {
-    get tries() { return _tries; },
-    get retries() { return _retries; },
-    get client() { return _client; },
-    get events() { return _events; },
-    destroy,
-    on: (event: PingDispatchEvent, handler: (tries?: number, client?: Socket) => void) => {
-      _events[event].push(handler);
-      return api;
-    },
-    connect
-  };
+  retries = 0;
+  socket: Socket;
 
-  function destroy() {
-    _retries = 0;
-    _tries = 0;
-    _canRetry = true; // so if called again can start.
-    if (_client)
-      _client.destroy();
-    dispatch('destroyed');
+  options: IPingerOptions;
+
+  constructor(portOrOptions?: number | IPingerOptions, host?: string, socketOptions?: SocketConstructorOpts) {
+
+    let options = portOrOptions as IPingerOptions;
+
+    if (typeof portOrOptions === 'number') {
+      options = {
+        port: portOrOptions as number,
+        host: host,
+        attempts: 10,
+        delay: 1800,
+        ...socketOptions
+      };
+    }
+
+    this.options = { port: 3000, host: '127.0.0.1', ...options };
+
   }
 
-  function dispatch(event: PingDispatchEvent) {
-    if (_events[event].length)
-      _events[event].forEach((handler => handler(_tries, _client)));
+  private dispatch(event: PingerEvent) {
+    if (this._events[event].length)
+      this._events[event].forEach(handler => handler(this.retries, this));
   }
 
-  async function connect(options: SocketConstructorOpts & { retries?: number, delay?: number } = {}) {
+  get host() {
+    return this.options.host;
+  }
 
-    // iterated through next iteration is zero so exit.
-    if (_canRetry === false)
-      return;
+  get port() {
+    return this.options.port;
+  }
 
-    // if is undefined set the default.
-    options.retries = options.retries || 5;
-    options.delay = typeof options.delay === 'undefined' ? 1200 : options.delay;
+  on(event: PingerEvent, handler: PingerHandler) {
+    this._events[event].push(handler);
+    return this;
+  }
 
-    const { retries, delay, ...rest } = options;
+  off(event: PingerEvent, handler: PingerHandler) {
+    const events = this._events[event];
+    this._events[event] = events[event].splice(events[event].indexOf(handler), 1);
+    return this;
+  }
 
-    _retries = retries;
-    _tries += 1;
-    dispatch('retry');
+  private retry() {
+    this.retries += 1;
+    this.dispatch('retry');
+    this.socket.connect(this.port, this.host, () => {
+      this.socket.end();
+      this.dispatch('connected');
+    });
+  }
 
-    _client = new Socket(rest);
+  start() {
 
-    _client.connect({ host, port }, () => {
-      _client.end();
-      dispatch('connected');
+    this.socket = new Socket(this.options);
+
+    this.socket.on('error', (_) => {
+      this.dispatch('failed');
+      if (this.retries === this.options.attempts)
+        return this.destroy();
+      setTimeout(this.retry.bind(this), this.options.delay);
     });
 
-    _client.on('error', (err) => {
-      dispatch('retried');
-      // can't continue retries exhaused.
-      if (_canRetry && _tries === _retries)
-        return destroy();
-      // Restart with the original options.
-      setTimeout(() => {
-        connect(options);
-      }, delay);
-    });
+    return this;
 
   }
 
-  return api;
-
+  destroy() {
+    this.retries = 0;
+    if (this.socket)
+      this.socket.destroy();
+  }
 
 }
-
-export default pinger;
