@@ -1,18 +1,24 @@
 /// <reference types="node" />
 import { Socket, SocketConstructorOpts } from 'net';
+import { EventEmitter } from 'events';
 import { PingerEvent, IPingerOptions, PingerHandler } from './types';
-export declare class Pinger {
-    private _events;
+export declare interface Pinger {
+    on(event: PingerEvent, handler: PingerHandler): this;
+    off(event: PingerEvent, handler: PingerHandler): this;
+}
+export declare class Pinger extends EventEmitter {
     retries: number;
     socket: Socket;
+    connected: boolean;
+    timeoutId: NodeJS.Timeout;
     options: IPingerOptions;
     constructor(portOrOptions?: number | IPingerOptions, host?: string, socketOptions?: SocketConstructorOpts);
     private dispatch;
+    private retry;
+    private reset;
+    private finished;
     get host(): string;
     get port(): number;
-    on(event: PingerEvent, handler: PingerHandler): this;
-    off(event: PingerEvent, handler: PingerHandler): this;
-    private retry;
-    start(): this;
+    start(onConnected?: (retries?: number, pinger?: Pinger) => void): this;
     destroy(): void;
 }

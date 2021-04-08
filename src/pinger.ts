@@ -1,21 +1,31 @@
 import { Socket, SocketConstructorOpts } from 'net';
-import { PingerEvent, IPingerOptions, IPingerEvents, PingerHandler } from './types';
+import { EventEmitter } from 'events';
+import { PingerEvent, IPingerOptions, PingerHandler } from './types';
 
-export class Pinger {
+const PINGER_DEFAULTS = {
+  host: '127.0.0.1',
+  port: 3000,
+  attempts: 10,
+  delay: 1800
+};
 
-  private _events: IPingerEvents = {
-    retry: [],
-    failed: [],
-    connected: [],
-    destroyed: []
-  };
+export declare interface Pinger {
+  on(event: PingerEvent, handler: PingerHandler): this;
+  off(event: PingerEvent, handler: PingerHandler): this;
+}
+
+export class Pinger extends EventEmitter {
 
   retries = 0;
   socket: Socket;
+  connected: boolean = false;
+  timeoutId: NodeJS.Timeout;
 
   options: IPingerOptions;
 
   constructor(portOrOptions?: number | IPingerOptions, host?: string, socketOptions?: SocketConstructorOpts) {
+
+    super();
 
     let options = portOrOptions as IPingerOptions;
 
@@ -23,19 +33,40 @@ export class Pinger {
       options = {
         port: portOrOptions as number,
         host: host,
-        attempts: 10,
-        delay: 1800,
         ...socketOptions
       };
     }
 
-    this.options = { port: 3000, host: '127.0.0.1', ...options };
+    this.options = { ...PINGER_DEFAULTS, ...options };
 
   }
 
   private dispatch(event: PingerEvent) {
-    if (this._events[event].length)
-      this._events[event].forEach(handler => handler(this.retries, this));
+    this.emit(event, this.retries, this);
+  }
+
+  private retry() {
+    if (this.connected) return;
+    this.retries += 1;
+    this.dispatch('retry');
+    this.socket.connect(this.port, this.host, () => {
+      this.socket.end();
+      this.finished();
+      this.connected = true;
+    });
+  }
+
+  private reset() {
+    clearTimeout(this.timeoutId);
+    this.connected = false;
+    this.retries = 0;
+    this.connected = false;
+  }
+
+  private finished() {
+    if (this.connected) return;
+    this.dispatch('connected');
+    this.reset();
   }
 
   get host() {
@@ -46,45 +77,34 @@ export class Pinger {
     return this.options.port;
   }
 
-  on(event: PingerEvent, handler: PingerHandler) {
-    this._events[event].push(handler);
-    return this;
-  }
+  start(onConnected?: (retries?: number, pinger?: Pinger) => void) {
 
-  off(event: PingerEvent, handler: PingerHandler) {
-    const events = this._events[event];
-    this._events[event] = events[event].splice(events[event].indexOf(handler), 1);
-    return this;
-  }
+    if (this.socket) return this;
 
-  private retry() {
-    this.retries += 1;
-    this.dispatch('retry');
-    this.socket.connect(this.port, this.host, () => {
-      this.socket.end();
-      this.dispatch('connected');
-    });
-  }
-
-  start() {
+    if (onConnected)
+      this.on('connected', onConnected);
 
     this.socket = new Socket(this.options);
 
     this.socket.on('error', (_) => {
+      if (this.connected) return;
+      clearTimeout(this.timeoutId);
       this.dispatch('failed');
       if (this.retries === this.options.attempts)
         return this.destroy();
-      setTimeout(this.retry.bind(this), this.options.delay);
+      this.timeoutId = setTimeout(() => this.retry(), this.options.delay);
     });
+
+    this.retry();
 
     return this;
 
   }
 
   destroy() {
-    this.retries = 0;
-    if (this.socket)
-      this.socket.destroy();
+    this.dispatch('destroyed');
+    this.reset();
+    this.socket && this.socket.destroy();
   }
 
 }

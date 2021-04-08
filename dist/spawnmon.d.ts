@@ -1,17 +1,33 @@
-/// <reference types="node" />
 import { Command } from './command';
-import { ISpawnmonOptions, ICommandOptions } from './types';
+import { ISpawnmonOptions, ICommandOptions, Color } from './types';
 export declare class Spawnmon {
     commands: Map<string, Command>;
+    running: boolean;
+    indexes: string[];
+    maxPrefix: number;
     options: ISpawnmonOptions;
     constructor(options?: ISpawnmonOptions);
-    get pids(): number[];
+    private setMaxPrefix;
+    private prepareOutput;
+    private padPrefix;
     /**
-     * Writes output to the default or user specified stream.
+     * Outputs data to specified write stream.
      *
-     * @param data the data to be written.
+     * @param data the data to write out to the write stream.
+     * @param shouldKill when true should exist after writing.
      */
-    writer(data: string | Buffer): Promise<void>;
+    write(data: string | Error, shouldKill?: boolean): Promise<void>;
+    /**
+     * Gets process id's of commands.
+     */
+    get pids(): number[];
+    formatPrefix(command: string, color?: Color): string;
+    /**
+     * Gets the index of a command.
+     *
+     * @param command the command name to get an index for.
+     */
+    getIndex(command: string): number;
     /**
      * Adds a new command to the queue.
      *
@@ -19,7 +35,7 @@ export declare class Spawnmon {
      * @param args the arguments to be pased.
      * @param options additional command options.
      */
-    add(command: string, args?: any[], options?: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>): Command;
     /**
      * Adds a new command to the queue by options object.
      *
@@ -58,6 +74,7 @@ export declare class Spawnmon {
      * Kills all bound commands.
      */
     kill(): void;
+    handleSignals(): void;
     /**
      * Helper to enabled catching uncaught and unhanded rejection errors.
      * Typically not needed but can be helpful when issues arise.

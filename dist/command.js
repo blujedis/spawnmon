@@ -6,39 +6,145 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
 const cross_spawn_1 = __importDefault(require("cross-spawn"));
 const rxjs_1 = require("rxjs");
+const operators_1 = require("rxjs/operators");
+const tree_kill_1 = __importDefault(require("tree-kill"));
+const utils_1 = require("./utils");
 const COMMON_DEFAULTS = {
     command: '',
-    args: []
+    args: [],
+    condensed: false,
+    delay: 0
 };
 class Command {
     constructor(options, spawnmon) {
         this.subscriptions = [];
-        this.options = { ...COMMON_DEFAULTS, ...options };
+        const { prefixDefaultColor, condensed } = spawnmon.options;
+        this.options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
+        if (options.onIdle)
+            this.onIdle(options.onIdle);
         this.spawnmon = spawnmon;
     }
     /**
      * Prepares options and command arguments.
      * Ensures we're always getting the lastest.
+     * looks a mess here but simplifies options
+     * object for the user.
      */
     get prepare() {
-        const { command, args, transform, color, prefix, ...rest } = this.options;
+        const { command, args, transform, color, ...rest } = this.options;
         const { uid, gid, env, cwd } = this.spawnmon.options;
         const options = { uid, gid, env, cwd, ...rest };
         return [command, args, options];
+    }
+    write(data, shouldKill = false) {
+        if (typeof data === 'string')
+            data = this.format(data);
+        this.updateTimer(shouldKill);
+        this.spawnmon.write(data, shouldKill);
+    }
+    /**
+     * Gets the line prefix if enabled.
+     */
+    getPrefix(unpadded = false) {
+        const prefix = this.spawnmon.formatPrefix(this.command, this.options.color);
+        if (unpadded)
+            return prefix;
+        return prefix + ' ';
+    }
+    /**
+     * Checks if out put should be condensed.
+     *
+     * @param data the data to inspect for condensed format.
+     */
+    format(data) {
+        const prefix = this.getPrefix();
+        data = data.replace(/\u2026/g, '...');
+        let lines = data.split('\n');
+        const lastIndex = lines.length - 1;
+        lines = lines.reduce((results, line, index) => {
+            // Empty line condensed on ignore it.
+            if (this.options.condensed && (utils_1.isBlankLine(line) || !line.length))
+                return results;
+            const inspect = line.replace(/[^\w]/gi, '').trim();
+            if (lines.length > 1 && lastIndex === index && !inspect.length)
+                return results;
+            // Ansi escape resets color that may wrap from preceeding line.
+            line = '\u001b[0m' + prefix + line;
+            return [...results, line.trim()];
+        }, []);
+        // need to tweak this a bit so we don't get random prefix with blank line.
+        return lines.join('\n').trim();
+    }
+    updateTimer(stop = false) {
+        if (!this.timer)
+            return;
+        if (stop)
+            return this.timer.stop();
+        this.timer.update();
     }
     /**
      * Subscribes to a child's stream.
      *
      * @param from the stream the subscription is from.
-     * @param stream the readable stream to get event from.
+     * @param input the readable, writable stream or child process.
      * @param transform the transform for output.
      */
-    subscribe(from, stream, transform) {
-        // .pipe(map(e => e))
-        transform = transform || this.transform;
-        const subscription = rxjs_1.fromEvent(stream, 'data')
-            .subscribe(v => transform(v.toString(), this.command, from));
+    subscribe(from, input, transform) {
+        let subscription;
+        // this is goofy should rework this soon.
+        if (this.timer && !this.timer.running)
+            this.timer.start();
+        const metadata = {
+            command: this.command,
+            from
+        };
+        if (from === 'stdin') {
+            rxjs_1.fromEvent(input, 'data')
+                .subscribe(v => {
+                if (this.stdin && this.child) {
+                    console.log('got input - ', v.toString());
+                    this.stdin.write(v.toString());
+                }
+            });
+        }
+        else if (from === 'error') {
+            rxjs_1.fromEvent(input, 'error')
+                .subscribe(err => {
+                // DO NOT allow muting of errors.
+                this.child = undefined;
+                this.write(err, true);
+            });
+        }
+        else if (from === 'close') {
+            rxjs_1.fromEvent(input, 'close')
+                .subscribe(code => {
+                if (!this.options.mute)
+                    this.write(`${this.command} exited with code ${code}`);
+                this.child = undefined;
+            });
+        }
+        else {
+            transform = transform || this.transform;
+            subscription =
+                rxjs_1.fromEvent(input, 'data')
+                    .pipe(operators_1.map(e => transform(utils_1.chomp(e), metadata)))
+                    .subscribe(v => {
+                    if (!this.options.mute)
+                        this.write(v);
+                });
+        }
         this.subscriptions.push(subscription);
+    }
+    /**
+     * Internal method for spawning command.
+     *
+     * @param transform optional transform to past to streams.
+     */
+    spawnCommnad(transform) {
+        this.child = cross_spawn_1.default(...this.prepare);
+        this.child.stdout && this.subscribe('stdout', this.child.stdout, transform);
+        this.child.stderr && this.subscribe('stderr', this.child.stderr, transform);
+        this.stdin = this.child.stdin;
     }
     /**
      * Gets the process id if active.
@@ -81,7 +187,34 @@ class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe() {
-        this.subscriptions.forEach(s => s.unsubscribe());
+        this.subscriptions.forEach(sub => {
+            if (!sub.closed)
+                sub.unsubscribe();
+        });
+        return this;
+    }
+    pingAfter(pinger, condition) {
+    }
+    onIdle(optionsOrCallback, cb) {
+        let options = optionsOrCallback;
+        if (typeof optionsOrCallback === 'function') {
+            options = {
+                done: optionsOrCallback
+            };
+        }
+        else if (typeof optionsOrCallback === 'boolean') {
+            options = {
+                interval: optionsOrCallback,
+                done: cb
+            };
+        }
+        this.timer = utils_1.createTimer({
+            name: this.command,
+            onMessage: (m) => {
+                this.write(utils_1.colorize(m, 'yellow'));
+            },
+            ...options
+        });
         return this;
     }
     /**
@@ -90,17 +223,23 @@ class Command {
      * @param transform optional tranform, handy when calling programatically.
      */
     run(transform) {
-        this.child = cross_spawn_1.default(...this.prepare);
-        this.child.stdout && this.subscribe('stdout', this.child.stdout, transform);
-        this.child.stderr && this.subscribe('stderr', this.child.stderr, transform);
+        if (!this.options.delay)
+            return this.spawnCommnad(transform);
+        this.delayTimeoutId = setTimeout(() => this.spawnCommnad(transform), this.options.delay);
         return this;
     }
     /**
      * Kills the command if process still exists.
      */
-    kill() {
-        this.unsubscribe();
-        this.child && this.child.kill();
+    kill(signal, cb) {
+        // not entirely need but...
+        clearTimeout(this.delayTimeoutId);
+        if (this.timer)
+            this.timer.stop();
+        !!this.child && tree_kill_1.default(this.pid, signal, (err) => {
+            if (cb)
+                cb(err);
+        });
     }
 }
 exports.Command = Command;

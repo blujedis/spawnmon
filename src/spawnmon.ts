@@ -1,33 +1,120 @@
 import { Command } from './command';
-import { ISpawnmonOptions, ICommandOptions, } from './types';
+import { ISpawnmonOptions, ICommandOptions, Color, } from './types';
+import { colorize, truncate } from './utils';
+
+process.env.FORCE_COLOR = '1';
 
 const SPAWNMON_DEFAULTS: ISpawnmonOptions = {
-  writestream: process.stdout
+  writestream: process.stdout,
+  transform: (line) => line.toString(),
+  prefix: 'index',
+  prefixMax: 10,
+  prefixDefaultColor: 'dim',
+  prefixTemplate: '[{{prefix}}]',
+  prefixAlign: 'left',
+  prefixFill: '.',
+  condensed: false
 };
 
 export class Spawnmon {
 
   commands = new Map<string, Command>();
+  running = false;
+  indexes: string[] = [];
+  maxPrefix: number = 0; // updated before run.
 
   options: ISpawnmonOptions;
 
   constructor(options?: ISpawnmonOptions) {
     this.options = { ...SPAWNMON_DEFAULTS, ...options };
+    this.handleSignals();
   }
 
+  private setMaxPrefix(commands: string[]) {
+    const max = Math.max(0, ...commands.map(v => v.length));
+    this.maxPrefix = max > this.options.prefixMax ? this.options.prefixMax : max;
+  }
+
+  private prepareOutput(data: string) {
+    data = data.toString();
+    if (!/\n$/.test(data))
+      data += '\n';
+    if (/\n\n$/.test(data))
+      data = data.replace(/\n\n$/, '\n');
+    return data;
+  }
+
+  private padPrefix(prefix: string, offset: number, align: 'left' | 'right' | 'center' = this.options.prefixAlign) {
+    if (offset <= 0)
+      return prefix; // nothing to do.
+    const fill = this.options.prefixFill;
+    if (align === 'right')
+      prefix = fill.repeat(offset) + prefix;
+    else if (align === 'center')
+      prefix = fill.repeat(Math.floor(offset / 2)) + prefix + fill.repeat(Math.floor(offset / 2) + offset % 2);
+    else
+      prefix = prefix + fill.repeat(offset);
+    return prefix;
+  }
+
+  /**
+   * Outputs data to specified write stream.
+   * 
+   * @param data the data to write out to the write stream.
+   * @param shouldKill when true should exist after writing.
+   */
+  async write(data: string | Error, shouldKill = false) {
+    if (data instanceof Error)
+      throw data;
+    await this.options.writestream.write(this.prepareOutput(data));
+    if (shouldKill)
+      this.kill();
+  }
+
+  /**
+   * Gets process id's of commands.
+   */
   get pids() {
     return [...this.commands.values()].map(cmd => cmd.pid);
   }
 
+  formatPrefix(command: string, color: Color = this.options.prefixDefaultColor) {
+
+    let prefix = '';
+    if (!this.options.prefix) // prefix disabled, return empty string.
+      return prefix;
+
+    const template = this.options.prefixTemplate;
+    const templateLen = template.replace('{{prefix}}', '').length;
+    const adjMax = this.maxPrefix - templateLen;
+
+    prefix = this.options.prefix === 'command' ? command : this.getIndex(command) + '';
+
+    // Only truncate if command is used not index, no point.
+    if (this.maxPrefix && adjMax > 0 && this.options.prefix === 'command') {
+      prefix = prefix.length > adjMax && adjMax > 0
+        ? truncate(prefix, adjMax, '')
+        : prefix;
+      const offset = prefix.length > adjMax ? 0 : adjMax - prefix.length;
+      prefix = this.padPrefix(prefix, offset);
+    }
+
+    prefix = template.replace('{{prefix}}', prefix);
+
+    if (color)
+      prefix = colorize(prefix, color);
+
+    return prefix;
+
+  }
+
   /**
-   * Writes output to the default or user specified stream.
+   * Gets the index of a command.
    * 
-   * @param data the data to be written.
+   * @param command the command name to get an index for.
    */
-  async writer(data: string | Buffer) {
-    const result = await this.options.writestream.write(data);
-    if (!result)
-      console.error('Whoops failed to write output.');
+  getIndex(command: string) {
+    return this.indexes.indexOf(command);
   }
 
   /**
@@ -37,7 +124,7 @@ export class Spawnmon {
    * @param args the arguments to be pased.
    * @param options additional command options.
    */
-  add(command: string, args?: any[], options?: Omit<ICommandOptions, 'command' | 'args'>): Command;
+  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>): Command;
 
   /**
    * Adds a new command to the queue by options object.
@@ -45,7 +132,7 @@ export class Spawnmon {
    * @param options the command configuration obtions.
    */
   add(options: ICommandOptions): Command;
-  add(nameOrOptions: string | ICommandOptions, commandArgs?: any[], initOptions?: ICommandOptions) {
+  add(nameOrOptions: string | ICommandOptions, commandArgs?: string | string[], initOptions?: ICommandOptions) {
 
     let options = nameOrOptions as ICommandOptions;
 
@@ -54,6 +141,8 @@ export class Spawnmon {
       commandArgs = undefined;
     }
     else {
+      if (typeof commandArgs === 'string')
+        commandArgs = [commandArgs];
       options = {
         command: nameOrOptions as string,
         args: commandArgs,
@@ -61,9 +150,12 @@ export class Spawnmon {
       };
     }
 
-    const cmd = new Command(options,  this);
+    const cmd = new Command(options, this);
     this.commands.set(cmd.command, cmd);
+    this.indexes.push(cmd.command);
+
     return cmd;
+
   }
 
   /**
@@ -86,7 +178,16 @@ export class Spawnmon {
   run(): void;
 
   run(...commands: string[]) {
-
+    if (!commands.length)
+      commands = [...this.commands.keys()];
+    this.setMaxPrefix(commands);
+    commands.forEach(key => {
+      const command = this.commands.get(key);
+      setTimeout(() => {
+        command.run();
+      }, 100);
+    });
+    this.running = true;
   }
 
   /**
@@ -111,9 +212,23 @@ export class Spawnmon {
   kill(...names: string[]) {
     if (!names.length)
       names = [...this.commands.keys()];
+    this.running = false;
     names.forEach(k => {
       const command = this.commands.get(k);
       command.kill();
+    });
+  }
+
+  handleSignals() {
+    const signals = ['SIGINT', 'SIGHUP', 'SIGTERM'] as NodeJS.Signals[];
+    signals.forEach(signal => {
+      process.on(signal, () => {
+        const output = [];
+        [...this.commands.values()].forEach(cmd => {
+          output.push((colorize(`${cmd.command} recived signal ${signal}.`, 'dim')));
+        });
+        this.write('\n' + output.join('\n'));
+      });
     });
   }
 
@@ -123,7 +238,7 @@ export class Spawnmon {
    */
   enableUncaughtExceptions() {
 
-    const handler = (err: Error) => this.writer(err.stack + '\n');
+    const handler = (err: Error) => this.write(err.stack + '\n');
 
     const unsubscribe = () => {
       process.off('uncaughtException', handler);
