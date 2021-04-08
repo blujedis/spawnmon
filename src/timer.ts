@@ -30,7 +30,7 @@ export class SimpleTimer extends EventEmitter {
     super();
     options = { ...TIMER_DEFAULTS, ...options };
     this.options = options;
-    if (options.onCondition) 
+    if (options.onCondition)
       this.on('condition', this.options.onCondition);
   }
 
@@ -50,7 +50,7 @@ export class SimpleTimer extends EventEmitter {
   }
 
   private finished() {
-    this.emit('finished', this.endTime - this.startTime, this);
+    this.emit('condition', this.endTime - this.startTime, this);
     this.stop();
   }
 

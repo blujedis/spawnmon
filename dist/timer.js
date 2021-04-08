@@ -38,7 +38,7 @@ class SimpleTimer extends events_1.default {
         return this.initialized && current === previous;
     }
     finished() {
-        this.emit('finished', this.endTime - this.startTime, this);
+        this.emit('condition', this.endTime - this.startTime, this);
         this.stop();
     }
     update() {

@@ -106,50 +106,40 @@ export declare class Command {
      * @param interval the time interval to ping at.
      * @param onCondition a callback to be called when condition is met.
      */
-    setTimer(interval: number, onCondition: SimpleTimerHandler): this;
+    setTimer(interval: number, onCondition: SimpleTimerHandler): SimpleTimer;
     /**
     * Creates Timer using onCondition callback.
     *
     * @param onCondition a callback to be called when condition is met.
     */
-    setTimer(onCondition: SimpleTimerHandler): this;
+    setTimer(onCondition: SimpleTimerHandler): SimpleTimer;
     /**
     * Creates Timer using the specified options for configuration.
     *
     * @param options the time timer configuration object.
     */
-    setTimer(options: ISimpleTimerOptions): this;
-    /**
-   * Adds a new command to the queue.
-   *
-   * @param command the command to be executed.
-   * @param as an alias name for the command.
-   * @param args the arguments to be pased.
-   * @param options additional command options.
-   */
-    runConnected(command: string, as: string, args: string | string[], options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    setTimer(options?: ISimpleTimerOptions): SimpleTimer;
     /**
      * Adds a new command to the queue.
      *
      * @param command the command to be executed.
      * @param args the arguments to be pased.
      * @param options additional command options.
+     * @param as an alias name for the command.
      */
-    runConnected(command: string, args: string | string[], options: Omit<ICommandOptions, 'command' | 'args'>): Command;
-    /**
-     * Adds a new command to the queue.
-     *
-     * @param command the command to be executed.
-     * @param options additional command options.
-     */
-    runConnected(command: string, options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    runConnected(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
     /**
      * Adds existing Command to Spawnmon instance..
      *
      * @param command a command instance.
-     * @param as an optional alias for the command.
      */
-    runConnected(command: Command, as?: string): Command;
+    runConnected(command: Command): Command;
+    /**
+     * Adds a new command to the queue by options object.
+     *
+     * @param options the command configuration obtions.
+     */
+    runConnected(options: ICommandOptions): Command;
     /**
      * Runs the command.
      *

@@ -69,7 +69,7 @@ class Command {
      */
     format(data) {
         const prefix = this.getPrefix();
-        data = data.replace(/\u2026/g, '...');
+        //  data = data.replace(/\u2026/g, '...');
         let lines = data.split('\n');
         const lastIndex = lines.length - 1;
         lines = lines.reduce((results, line, index) => {
@@ -231,7 +231,7 @@ class Command {
     }
     setTimer(optionsOrCallback, onCondition) {
         if (this.timer)
-            return this;
+            return this.timer;
         let options = optionsOrCallback;
         if (typeof optionsOrCallback === 'function') {
             onCondition = optionsOrCallback;
@@ -249,52 +249,33 @@ class Command {
         });
         const msg = `${this.command} timer expired before condition.`;
         this.timer.on('timeout', () => this.write(utils_1.colorize(msg, 'yellow')));
-        return this;
+        return this.timer;
     }
-    runConnected(nameOrOptions, as, commandArgs, initOptions) {
+    runConnected(nameOrOptions, commandArgs, initOptions, as) {
         let cmd = nameOrOptions;
         // lookup command or create.
         if (typeof nameOrOptions === 'string')
             cmd = this.spawnmon.commands.get(nameOrOptions);
-        // try to get from alias.
-        if (typeof as === 'string')
-            cmd = this.spawnmon.commands.get(as);
         // if we get here this is a new command
         // with args, options etc call parent add
         // but specify not to index.
-        if (!cmd) {
+        if (!cmd && typeof nameOrOptions !== 'undefined') {
             // Just some defaults so the add function 
             // knows how to handle. 
             initOptions = {
                 indexed: false,
                 ...initOptions
             };
-            const tuple = [nameOrOptions, as, commandArgs, initOptions];
             // No need to worry about positions of args here
             // the .add() method in the core will sort it out.
-            const add = this.spawnmon.add;
-            cmd = add(...tuple);
-            // if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
-            //   initOptions = commandArgs;
-            //   commandArgs = undefined;
-            // }
-            // if (typeof as !== 'string') {
-            //   if (Array.isArray(as)) {
-            //     commandArgs = as;
-            //     as = undefined;
-            //   }
-            //   else {
-            //     initOptions = as;
-            //   }
-            //   as = undefined;
-            // }
-            // const opts = initOptions as ICommandOptions;
-            // opts.command = nameOrOptions as string;
-            // opts.args = (commandArgs || []) as any[];
-            // opts.indexed = false;
-            // const aliasOrName = as || opts.command;
-            // cmd = new Command(initOptions as ICommandOptions, this.spawnmon);
+            cmd = this.spawnmon.add(nameOrOptions, commandArgs, initOptions, as);
         }
+        if (!cmd)
+            return null;
+        this.timer = this.timer || this.setTimer();
+        this.timer.on('condition', (elapsed) => {
+            console.log('Elapased time', (new Date(elapsed)).toISOString());
+        });
         return cmd;
     }
     /**

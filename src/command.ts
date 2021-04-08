@@ -87,7 +87,7 @@ export class Command {
 
     const prefix = this.getPrefix();
 
-    data = data.replace(/\u2026/g, '...');
+    //  data = data.replace(/\u2026/g, '...');
 
     let lines = data.split('\n');
     const lastIndex = lines.length - 1;
@@ -313,25 +313,25 @@ export class Command {
    * @param interval the time interval to ping at.
    * @param onCondition a callback to be called when condition is met.
    */
-  setTimer(interval: number, onCondition: SimpleTimerHandler): this;
+  setTimer(interval: number, onCondition: SimpleTimerHandler): SimpleTimer;
 
   /**
   * Creates Timer using onCondition callback.
   * 
   * @param onCondition a callback to be called when condition is met.
   */
-  setTimer(onCondition: SimpleTimerHandler): this;
+  setTimer(onCondition: SimpleTimerHandler): SimpleTimer;
 
   /**
   * Creates Timer using the specified options for configuration.
   * 
   * @param options the time timer configuration object.
   */
-  setTimer(options?: ISimpleTimerOptions): this;
+  setTimer(options?: ISimpleTimerOptions): SimpleTimer;
   setTimer(optionsOrCallback?: ISimpleTimerOptions | SimpleTimerHandler | number, onCondition?: SimpleTimerHandler) {
 
     if (this.timer)
-      return this;
+      return this.timer;
 
     let options = optionsOrCallback as ISimpleTimerOptions;
 
@@ -355,7 +355,7 @@ export class Command {
     const msg = `${this.command} timer expired before condition.`;
     this.timer.on('timeout', () => this.write(colorize(msg, 'yellow')));
 
-    return this;
+    return this.timer;
 
   }
 
@@ -398,7 +398,7 @@ export class Command {
     // if we get here this is a new command
     // with args, options etc call parent add
     // but specify not to index.
-    if (!cmd) {
+    if (!cmd && typeof nameOrOptions !== 'undefined') {
 
       // Just some defaults so the add function 
       // knows how to handle. 
@@ -413,14 +413,15 @@ export class Command {
 
     }
 
-    // Set timer add 
-    if (this.timer) {
-      
-    }
-    else {
-      const timer = this.setTimer();
-    }
-  
+    if (!cmd)
+      return null;
+
+    this.timer = this.timer || this.setTimer();
+
+    this.timer.on('condition', (elapsed) => {
+      console.log('Elapased time', (new Date(elapsed)).toISOString());
+    });
+
     return cmd;
 
   }

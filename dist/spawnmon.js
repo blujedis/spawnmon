@@ -98,48 +98,23 @@ class Spawnmon {
     getIndex(command) {
         return this.indexes.indexOf(command);
     }
-    // /**
-    //  * Used internally.
-    //  * 
-    //  * @param args array of arguments.
-    //  */
-    // add(...args): Command;
-    add(nameOrOptions, as, commandArgs, initOptions) {
+    add(nameOrOptions, commandArgs, initOptions, as) {
         if (nameOrOptions instanceof command_1.Command) {
-            const aliasOrName = typeof as === 'string' ? as : nameOrOptions.command;
+            const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameOrOptions.command;
             this.commands.set(aliasOrName, nameOrOptions);
             if (nameOrOptions.options.indexed)
                 this.indexes.push(nameOrOptions.command);
             return nameOrOptions;
         }
-        // When calling from command we may have a few options so
-        // mix those back in when creating, treat like defaults.
-        const origOptions = { ...initOptions };
         if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
             initOptions = commandArgs;
             commandArgs = undefined;
-        }
-        if (typeof as === 'object' && !Array.isArray(as)) {
-            initOptions = as;
-            as = undefined;
-            commandArgs = undefined;
-        }
-        if (Array.isArray(as)) {
-            commandArgs = as;
-            as = undefined;
-        }
-        // check if we have 3 or four args.
-        // if three we need to shift args.
-        else if (typeof as === 'string' && arguments.length === 3) {
-            commandArgs = as;
-            as = undefined;
         }
         let options = nameOrOptions;
         // ensure an array.
         if (typeof commandArgs === 'string')
             commandArgs = [commandArgs];
         options = {
-            ...origOptions,
             command: nameOrOptions,
             args: commandArgs,
             ...initOptions
