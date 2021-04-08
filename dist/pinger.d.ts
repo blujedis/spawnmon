@@ -7,10 +7,10 @@ export declare interface Pinger {
     off(event: PingerEvent, handler: PingerHandler): this;
 }
 export declare class Pinger extends EventEmitter {
+    private timeoutId;
     retries: number;
     socket: Socket;
     connected: boolean;
-    timeoutId: NodeJS.Timeout;
     options: IPingerOptions;
     constructor(portOrOptions?: number | IPingerOptions, host?: string, socketOptions?: SocketConstructorOpts);
     private dispatch;
@@ -20,5 +20,6 @@ export declare class Pinger extends EventEmitter {
     get host(): string;
     get port(): number;
     start(onConnected?: (retries?: number, pinger?: Pinger) => void): this;
+    stop(): void;
     destroy(): void;
 }

@@ -2,6 +2,7 @@ import { SpawnOptions, ProcessEnvOptions } from 'child_process';
 import { StylesType, StyleFunction } from 'ansi-colors';
 import { SocketConstructorOpts } from 'net';
 import { Pinger } from './pinger';
+import { SimpleTimer } from './timer';
 
 // COMMAND
 //----------------------------------------
@@ -19,13 +20,16 @@ export type TransformHandler = (line: string | Buffer | Error, metadata?: ITrans
 
 export interface ICommandOptions extends SpawnOptions {
   command: string;
+  as?: string;
   args?: string[];
   transform?: TransformHandler;
   color?: Color;
   mute?: boolean;
   condensed?: boolean;
   delay?: number;
-  onIdle?: () => void;
+  pinger?: Pinger | IPingerOptions;
+  timer?: SimpleTimer | ISimpleTimerOptions;
+  indexed?: boolean; // when false is not pushed to indexed runnable commands.
 }
 
 export interface ISpawnmonOptions extends ProcessEnvOptions {
@@ -53,10 +57,28 @@ export interface IPinger {
 }
 
 export interface IPingerOptions extends SocketConstructorOpts {
-  host?: string;
-  port?: number;
-  attempts?: number;
-  delay?: number;
+  name?: string;  // updated to command name if not defined.
+  host?: string;  // default 127.0.0.1
+  port?: number;  // default 3000
+  attempts?: number; // default 10
+  timeout?: number; // default 1800
+  onConnected?: PingerHandler;
+}
+
+// TIMER
+//----------------------------------------
+
+export type SimpleTimerEvent = 'timeout' | 'condition' | 'update';
+
+export type SimpleTimerHandler = (elapased?: number, timer?: SimpleTimer) => void;
+
+export interface ISimpleTimerOptions {
+  name?: string;    // updated to command name if not defined.
+  interval?: number;
+  timeout?: number;
+  // called to check if condition is met, return true if it is.
+  condition?: (previous?: number, current?: number, timer?: SimpleTimer) => boolean;
+  onCondition?: SimpleTimerHandler;
 }
 
 // MISC
@@ -64,11 +86,3 @@ export interface IPingerOptions extends SocketConstructorOpts {
 
 export type Color = keyof StylesType<StyleFunction>;
 
-export interface IMonitorOptions {
-  name?: string;
-  interval?: number;
-  timeout?: number;
-  until?: (previous: number, current: number, intervalId: NodeJS.Timeout) => boolean;
-  done: () => void;
-  onMessage?: (message: string) => void;
-}

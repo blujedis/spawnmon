@@ -1,8 +1,6 @@
 import colors from 'ansi-colors';
 import strip from 'strip-ansi';
-import { Color, IMonitorOptions } from './types';
-
-export type SimpleTimer = ReturnType<typeof createTimer>;
+import { Color } from './types';
 
 export const NEWLINE_EXP = /\r?\n$/u;
 
@@ -17,98 +15,6 @@ export function chomp(line) {
   const match = NEWLINE_EXP.exec(line);
   if (!match) return line;
   return line.slice(0, match.index);
-}
-
-/**
- * Simple timer monitor that watches update counts. Once 
- * the counter goes stale and remains the same between
- * ticks of the "interval" we know then the stream is likely idle.
- * 
- * 
- * @param options define interval, done callback and callback to check if should exit.
- */
-export function createTimer(options?: IMonitorOptions) {
-
-  options = {
-    name: 'anonymous',
-    interval: 2500, // ping every 2.5 seconds check update ctr has changed.
-    timeout: 15000, // after 15 seconds shut'er down.
-    done: () => { },
-    onMessage: console.log,
-    ...options
-  };
-
-  // Timeout has to be longer, maybe change
-  // or make more confirable fine for now.
-  if (options.timeout <= options.interval)
-    options.timeout = options.interval + 1000;
-
-  const { name, interval, until, done, timeout, onMessage } = options;
-
-  let ctr = 0;
-  let prevCtr = 0;
-  let intervalId;
-  let timeoutId;
-  let running = false;
-  let initialized = false;
-
-  const api = {
-    get running() {
-      return running;
-    },
-    update,
-    start,
-    stop
-  };
-
-  // Default take until condition that based on timeout
-  // looks for idle output.
-  function takeUntil(previous, current) {
-    if (until)
-      return until(previous, current, intervalId);
-    return initialized && current === previous;
-  }
-
-  function update() {
-    initialized = true;
-    ctr += 1;
-  }
-
-  function finished() {
-    stop();
-    done();
-  }
-
-  function initTimeout() {
-    timeoutId = setTimeout(() => {
-      stop();
-      onMessage(`${name} timer expired before meeting condition.`);
-    }, timeout);
-  }
-
-  function start() {
-    if (running) return; // already running stop first.
-    if (intervalId) clearInterval(intervalId);
-    running = true;
-    initTimeout();
-    intervalId = setInterval(function () {
-      if (takeUntil(prevCtr, ctr))
-        return finished();
-      prevCtr = ctr;
-    }, interval);
-  }
-
-  function stop() {
-    clearInterval(intervalId);
-    clearInterval(timeoutId);
-    ctr = 0;
-    prevCtr = 0;
-    running = false;
-    initialized = false;
-  }
-
-  return api;
-
 }
 
 /**

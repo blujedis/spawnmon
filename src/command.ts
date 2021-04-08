@@ -6,22 +6,25 @@ import { ChildProcess, SpawnOptions } from 'child_process';
 import { Readable, Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import treekill from 'tree-kill';
-import { chomp, isBlankLine, createTimer, SimpleTimer, colorize } from './utils';
-import { EventSubscriptionType, ICommandOptions, IMonitorOptions, ITransformMetadata, TransformHandler } from './types';
+import { chomp, isBlankLine, colorize } from './utils';
 import { Pinger } from './pinger';
+import { SimpleTimer } from './timer';
+import { EventSubscriptionType, ICommandOptions, IPingerOptions, ISimpleTimerOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 
 const COMMON_DEFAULTS: ICommandOptions = {
   command: '',
   args: [],
   condensed: false,
-  delay: 0
+  delay: 0,
+  indexed: true
 };
 
 export class Command {
 
   private delayTimeoutId: NodeJS.Timeout;
-  private timer: SimpleTimer;
 
+  timer: SimpleTimer;
+  pinger: Pinger;
   child: ChildProcess;
   subscriptions: Subscription[] = [];
 
@@ -31,9 +34,17 @@ export class Command {
 
   constructor(options: ICommandOptions, spawnmon?: Spawnmon) {
     const { prefixDefaultColor, condensed } = spawnmon.options;
-    this.options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
-    if (options.onIdle)
-      this.onIdle(options.onIdle);
+    options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
+    let { pinger, timer } = options;
+    if (pinger) {
+      if (!(pinger instanceof Pinger))
+        pinger = new Pinger(pinger as IPingerOptions);
+    }
+    if (timer) {
+      if (!(timer instanceof SimpleTimer))
+        timer = new SimpleTimer(timer as ISimpleTimerOptions);
+    }
+    this.options = options;
     this.spawnmon = spawnmon;
   }
 
@@ -104,6 +115,11 @@ export class Command {
 
   }
 
+  /**
+   * Updates the timer issuing a new tick for the counters.
+   * 
+   * @param stop when true tells timer to stop. 
+   */
   private updateTimer(stop = false) {
     if (!this.timer) return;
     if (stop)
@@ -122,7 +138,7 @@ export class Command {
 
     let subscription: Subscription;
 
-    // this is goofy should rework this soon.
+    // if Timer exists ensure it is running.
     if (this.timer && !this.timer.running)
       this.timer.start();
 
@@ -181,7 +197,7 @@ export class Command {
    * 
    * @param transform optional transform to past to streams. 
    */
-  private spawnCommnad(transform?: TransformHandler) {
+  private spawnCommand(transform?: TransformHandler) {
     this.child = spawn(...this.prepare);
     this.child.stdout && this.subscribe('stdout', this.child.stdout, transform);
     this.child.stderr && this.subscribe('stderr', this.child.stderr, transform);
@@ -241,57 +257,171 @@ export class Command {
     return this;
   }
 
-  pingAfter(pinger: Pinger, condition: () => boolean) {
+  /**
+  * Creates Pinger instance using default options with provided
+  * onConnected callback and timeout.
+  * 
+  * @param timeout the timeout duration between tries.
+  * @param onConnected a callback to be called when connected to socket.
+  */
+  setPinger(timeout: number, onConnected: PingerHandler): this;
+
+  /**
+  * Creates Pinger instance using default options with provided on connected callback.
+  * 
+  * @param onConnected a callback to be called when connected to socket.
+  */
+  setPinger(onConnected: PingerHandler): this;
+
+  /**
+  * Creates Pinger instance using the provided options.
+  * 
+  * @param options the time Pinger configuration object.
+  */
+  setPinger(options: IPingerOptions): this;
+  setPinger(optionsOrCallback?: IPingerOptions | PingerHandler | number, onConnected?: PingerHandler) {
+
+    if (this.pinger)
+      return this;
+
+    let options = optionsOrCallback as IPingerOptions;
+
+    if (typeof optionsOrCallback === 'function') {
+      onConnected = optionsOrCallback;
+      optionsOrCallback = undefined;
+    }
+
+    else if (typeof optionsOrCallback === 'number') {
+      options = {
+        timeout: optionsOrCallback
+      };
+    }
+
+    this.pinger = new Pinger({
+      name: this.command,
+      onConnected,
+      ...options
+    });
+
+    return this;
 
   }
 
   /**
-   * Calls a callback when condition is met and output is idle.
+   * Creates Timer using interval and onCondition callback.
    * 
    * @param interval the time interval to ping at.
-   * @param cb a callback to be called when condition is met.
+   * @param onCondition a callback to be called when condition is met.
    */
-  onIdle(interval: number, cb: () => void): this;
+  setTimer(interval: number, onCondition: SimpleTimerHandler): this;
 
   /**
-  * Calls a callback when condition is met and output is idle.
+  * Creates Timer using onCondition callback.
   * 
-  * @param cb a callback to be called when condition is met.
+  * @param onCondition a callback to be called when condition is met.
   */
-  onIdle(cb: () => void): this;
+  setTimer(onCondition: SimpleTimerHandler): this;
 
   /**
-  * Calls a callback when condition is met and output is idle.
+  * Creates Timer using the specified options for configuration.
   * 
   * @param options the time timer configuration object.
   */
-  onIdle(options: IMonitorOptions): this;
-  onIdle(optionsOrCallback?: IMonitorOptions | (() => void) | number, cb?: () => void) {
+  setTimer(options?: ISimpleTimerOptions): this;
+  setTimer(optionsOrCallback?: ISimpleTimerOptions | SimpleTimerHandler | number, onCondition?: SimpleTimerHandler) {
 
-    let options = optionsOrCallback as IMonitorOptions;
+    if (this.timer)
+      return this;
+
+    let options = optionsOrCallback as ISimpleTimerOptions;
 
     if (typeof optionsOrCallback === 'function') {
-      options = {
-        done: optionsOrCallback
-      };
+      onCondition = optionsOrCallback;
+      optionsOrCallback = undefined;
     }
 
     else if (typeof optionsOrCallback === 'boolean') {
       options = {
         interval: optionsOrCallback,
-        done: cb
       };
     }
 
-    this.timer = createTimer({
+    this.timer = new SimpleTimer({
       name: this.command,
-      onMessage: (m) => {
-        this.write(colorize(m, 'yellow'));
-      },
+      onCondition,
       ...options
     });
 
+    const msg = `${this.command} timer expired before condition.`;
+    this.timer.on('timeout', () => this.write(colorize(msg, 'yellow')));
+
     return this;
+
+  }
+
+  /**
+   * Adds a new command to the queue.
+   * 
+   * @param command the command to be executed.
+   * @param args the arguments to be pased.
+   * @param options additional command options.
+   * @param as an alias name for the command.
+   */
+  runConnected(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+
+  /**
+   * Adds existing Command to Spawnmon instance..
+   * 
+   * @param command a command instance.
+   */
+  runConnected(command: Command): Command;
+
+  /**
+   * Adds a new command to the queue by options object.
+   * 
+   * @param options the command configuration obtions.
+   */
+  runConnected(options: ICommandOptions): Command;
+
+  runConnected(
+    nameOrOptions: string | ICommandOptions | Command,
+    commandArgs?: string | string[],
+    initOptions?: Omit<ICommandOptions, 'command' | 'args'>,
+    as?: string) {
+
+    let cmd = nameOrOptions as Command;
+
+    // lookup command or create.
+    if (typeof nameOrOptions === 'string')
+      cmd = this.spawnmon.commands.get(nameOrOptions);
+
+    // if we get here this is a new command
+    // with args, options etc call parent add
+    // but specify not to index.
+    if (!cmd) {
+
+      // Just some defaults so the add function 
+      // knows how to handle. 
+      initOptions = {
+        indexed: false,
+        ...initOptions
+      };
+
+      // No need to worry about positions of args here
+      // the .add() method in the core will sort it out.
+      cmd = this.spawnmon.add(nameOrOptions as string, commandArgs, initOptions, as);
+
+    }
+
+    // Set timer add 
+    if (this.timer) {
+      
+    }
+    else {
+      const timer = this.setTimer();
+    }
+  
+    return cmd;
 
   }
 
@@ -302,8 +432,8 @@ export class Command {
    */
   run(transform?: TransformHandler) {
     if (!this.options.delay)
-      return this.spawnCommnad(transform);
-    this.delayTimeoutId = setTimeout(() => this.spawnCommnad(transform), this.options.delay);
+      return this.spawnCommand(transform);
+    this.delayTimeoutId = setTimeout(() => this.spawnCommand(transform), this.options.delay);
     return this;
   }
 

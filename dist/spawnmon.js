@@ -69,7 +69,9 @@ class Spawnmon {
     }
     formatPrefix(command, color = this.options.prefixDefaultColor) {
         let prefix = '';
-        if (!this.options.prefix) // prefix disabled, return empty string.
+        const cmd = this.commands.get(command);
+        // prefix disabled or command is not auto runnable, return empty string.
+        if (!this.options.prefix || !cmd.options.indexed)
             return prefix;
         const template = this.options.prefixTemplate;
         const templateLen = template.replace('{{prefix}}', '').length;
@@ -96,29 +98,64 @@ class Spawnmon {
     getIndex(command) {
         return this.indexes.indexOf(command);
     }
-    add(nameOrOptions, commandArgs, initOptions) {
-        let options = nameOrOptions;
-        if (typeof nameOrOptions === 'object' && nameOrOptions !== null) {
-            initOptions = undefined;
+    // /**
+    //  * Used internally.
+    //  * 
+    //  * @param args array of arguments.
+    //  */
+    // add(...args): Command;
+    add(nameOrOptions, as, commandArgs, initOptions) {
+        if (nameOrOptions instanceof command_1.Command) {
+            const aliasOrName = typeof as === 'string' ? as : nameOrOptions.command;
+            this.commands.set(aliasOrName, nameOrOptions);
+            if (nameOrOptions.options.indexed)
+                this.indexes.push(nameOrOptions.command);
+            return nameOrOptions;
+        }
+        // When calling from command we may have a few options so
+        // mix those back in when creating, treat like defaults.
+        const origOptions = { ...initOptions };
+        if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
+            initOptions = commandArgs;
             commandArgs = undefined;
         }
-        else {
-            if (typeof commandArgs === 'string')
-                commandArgs = [commandArgs];
-            options = {
-                command: nameOrOptions,
-                args: commandArgs,
-                ...initOptions
-            };
+        if (typeof as === 'object' && !Array.isArray(as)) {
+            initOptions = as;
+            as = undefined;
+            commandArgs = undefined;
         }
+        if (Array.isArray(as)) {
+            commandArgs = as;
+            as = undefined;
+        }
+        // check if we have 3 or four args.
+        // if three we need to shift args.
+        else if (typeof as === 'string' && arguments.length === 3) {
+            commandArgs = as;
+            as = undefined;
+        }
+        let options = nameOrOptions;
+        // ensure an array.
+        if (typeof commandArgs === 'string')
+            commandArgs = [commandArgs];
+        options = {
+            ...origOptions,
+            command: nameOrOptions,
+            args: commandArgs,
+            ...initOptions
+        };
         const cmd = new command_1.Command(options, this);
-        this.commands.set(cmd.command, cmd);
-        this.indexes.push(cmd.command);
+        const aliasOrName = as || cmd.command;
+        this.commands.set(aliasOrName, cmd);
+        if (cmd.options.indexed)
+            this.indexes.push(aliasOrName);
         return cmd;
     }
     run(...commands) {
         if (!commands.length)
             commands = [...this.commands.keys()];
+        // auto run ONLY indexed commands.
+        commands = commands.filter(c => this.indexes.includes(c));
         this.setMaxPrefix(commands);
         commands.forEach(key => {
             const command = this.commands.get(key);

@@ -32,10 +32,33 @@ export declare class Spawnmon {
      * Adds a new command to the queue.
      *
      * @param command the command to be executed.
+     * @param as an alias name for the command.
      * @param args the arguments to be pased.
      * @param options additional command options.
      */
-    add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    add(command: string, as: string, args: string | string[], options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    /**
+     * Adds a new command to the queue.
+     *
+     * @param command the command to be executed.
+     * @param args the arguments to be pased.
+     * @param options additional command options.
+     */
+    add(command: string, args: string | string[], options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    /**
+     * Adds a new command to the queue.
+     *
+     * @param command the command to be executed.
+     * @param options additional command options.
+     */
+    add(command: string, options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    /**
+     * Adds existing Command to Spawnmon instance..
+     *
+     * @param command a command instance.
+     * @param as an optional alias for the command.
+     */
+    add(command: Command, as?: string): Command;
     /**
      * Adds a new command to the queue by options object.
      *

@@ -3,6 +3,7 @@ import { SpawnOptions, ProcessEnvOptions } from 'child_process';
 import { StylesType, StyleFunction } from 'ansi-colors';
 import { SocketConstructorOpts } from 'net';
 import { Pinger } from './pinger';
+import { SimpleTimer } from './timer';
 export declare type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close' | 'stdin';
 export interface ITransformMetadata {
     command: string;
@@ -13,13 +14,16 @@ export interface ITransformMetadata {
 export declare type TransformHandler = (line: string | Buffer | Error, metadata?: ITransformMetadata) => string;
 export interface ICommandOptions extends SpawnOptions {
     command: string;
+    as?: string;
     args?: string[];
     transform?: TransformHandler;
     color?: Color;
     mute?: boolean;
     condensed?: boolean;
     delay?: number;
-    onIdle?: () => void;
+    pinger?: Pinger | IPingerOptions;
+    timer?: SimpleTimer | ISimpleTimerOptions;
+    indexed?: boolean;
 }
 export interface ISpawnmonOptions extends ProcessEnvOptions {
     writestream?: NodeJS.WritableStream;
@@ -39,17 +43,20 @@ export interface IPinger {
     off(event: PingerEvent, handler: PingerHandler): void;
 }
 export interface IPingerOptions extends SocketConstructorOpts {
+    name?: string;
     host?: string;
     port?: number;
     attempts?: number;
-    delay?: number;
+    timeout?: number;
+    onConnected?: PingerHandler;
 }
-export declare type Color = keyof StylesType<StyleFunction>;
-export interface IMonitorOptions {
+export declare type SimpleTimerEvent = 'timeout' | 'condition' | 'update';
+export declare type SimpleTimerHandler = (elapased?: number, timer?: SimpleTimer) => void;
+export interface ISimpleTimerOptions {
     name?: string;
     interval?: number;
     timeout?: number;
-    until?: (previous: number, current: number, intervalId: NodeJS.Timeout) => boolean;
-    done: () => void;
-    onMessage?: (message: string) => void;
+    condition?: (previous?: number, current?: number, timer?: SimpleTimer) => boolean;
+    onCondition?: SimpleTimerHandler;
 }
+export declare type Color = keyof StylesType<StyleFunction>;

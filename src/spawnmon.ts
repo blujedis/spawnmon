@@ -21,7 +21,7 @@ export class Spawnmon {
   commands = new Map<string, Command>();
   running = false;
   indexes: string[] = [];
-  maxPrefix: number = 0; // updated before run.
+  maxPrefix = 0; // updated before run.
 
   options: ISpawnmonOptions;
 
@@ -81,7 +81,10 @@ export class Spawnmon {
   formatPrefix(command: string, color: Color = this.options.prefixDefaultColor) {
 
     let prefix = '';
-    if (!this.options.prefix) // prefix disabled, return empty string.
+    const cmd = this.commands.get(command);
+
+    // prefix disabled or command is not auto runnable, return empty string.
+    if (!this.options.prefix || !cmd.options.indexed)
       return prefix;
 
     const template = this.options.prefixTemplate;
@@ -123,8 +126,17 @@ export class Spawnmon {
    * @param command the command to be executed.
    * @param args the arguments to be pased.
    * @param options additional command options.
+   * @param as an alias name for the command.
    */
-  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>): Command;
+  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+
+  /**
+   * Adds existing Command to Spawnmon instance..
+   * 
+   * @param command a command instance.
+   * @param as an optional alias for the command.
+   */
+  add(command: Command, as?: string): Command;
 
   /**
    * Adds a new command to the queue by options object.
@@ -132,27 +144,50 @@ export class Spawnmon {
    * @param options the command configuration obtions.
    */
   add(options: ICommandOptions): Command;
-  add(nameOrOptions: string | ICommandOptions, commandArgs?: string | string[], initOptions?: ICommandOptions) {
+
+  add(
+    nameOrOptions: string | ICommandOptions | Command,
+    commandArgs?: string | string[],
+    initOptions?: Omit<ICommandOptions, 'command' | 'args'>,
+    as?: string) {
+
+    if (nameOrOptions instanceof Command) {
+
+      const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameOrOptions.command;
+      this.commands.set(aliasOrName, nameOrOptions);
+
+      if (nameOrOptions.options.indexed)
+        this.indexes.push(nameOrOptions.command);
+
+      return nameOrOptions;
+
+    }
+
+    if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
+      initOptions = commandArgs;
+      commandArgs = undefined;
+    }
 
     let options = nameOrOptions as ICommandOptions;
 
-    if (typeof nameOrOptions === 'object' && nameOrOptions !== null) {
-      initOptions = undefined;
-      commandArgs = undefined;
-    }
-    else {
-      if (typeof commandArgs === 'string')
-        commandArgs = [commandArgs];
-      options = {
-        command: nameOrOptions as string,
-        args: commandArgs,
-        ...initOptions
-      };
-    }
+    // ensure an array.
+    if (typeof commandArgs === 'string')
+      commandArgs = [commandArgs];
+
+    options = {
+      command: nameOrOptions as string,
+      args: commandArgs as string[],
+      ...initOptions as ICommandOptions
+    };
 
     const cmd = new Command(options, this);
-    this.commands.set(cmd.command, cmd);
-    this.indexes.push(cmd.command);
+
+    const aliasOrName = as || cmd.command;
+
+    this.commands.set(aliasOrName as string, cmd);
+
+    if (cmd.options.indexed)
+      this.indexes.push(aliasOrName as string);
 
     return cmd;
 
@@ -180,6 +215,8 @@ export class Spawnmon {
   run(...commands: string[]) {
     if (!commands.length)
       commands = [...this.commands.keys()];
+    // auto run ONLY indexed commands.
+    commands = commands.filter(c => this.indexes.includes(c));
     this.setMaxPrefix(commands);
     commands.forEach(key => {
       const command = this.commands.get(key);

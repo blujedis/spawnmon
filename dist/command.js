@@ -9,19 +9,30 @@ const rxjs_1 = require("rxjs");
 const operators_1 = require("rxjs/operators");
 const tree_kill_1 = __importDefault(require("tree-kill"));
 const utils_1 = require("./utils");
+const pinger_1 = require("./pinger");
+const timer_1 = require("./timer");
 const COMMON_DEFAULTS = {
     command: '',
     args: [],
     condensed: false,
-    delay: 0
+    delay: 0,
+    indexed: true
 };
 class Command {
     constructor(options, spawnmon) {
         this.subscriptions = [];
         const { prefixDefaultColor, condensed } = spawnmon.options;
-        this.options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
-        if (options.onIdle)
-            this.onIdle(options.onIdle);
+        options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
+        let { pinger, timer } = options;
+        if (pinger) {
+            if (!(pinger instanceof pinger_1.Pinger))
+                pinger = new pinger_1.Pinger(pinger);
+        }
+        if (timer) {
+            if (!(timer instanceof timer_1.SimpleTimer))
+                timer = new timer_1.SimpleTimer(timer);
+        }
+        this.options = options;
         this.spawnmon = spawnmon;
     }
     /**
@@ -75,6 +86,11 @@ class Command {
         // need to tweak this a bit so we don't get random prefix with blank line.
         return lines.join('\n').trim();
     }
+    /**
+     * Updates the timer issuing a new tick for the counters.
+     *
+     * @param stop when true tells timer to stop.
+     */
     updateTimer(stop = false) {
         if (!this.timer)
             return;
@@ -91,7 +107,7 @@ class Command {
      */
     subscribe(from, input, transform) {
         let subscription;
-        // this is goofy should rework this soon.
+        // if Timer exists ensure it is running.
         if (this.timer && !this.timer.running)
             this.timer.start();
         const metadata = {
@@ -140,7 +156,7 @@ class Command {
      *
      * @param transform optional transform to past to streams.
      */
-    spawnCommnad(transform) {
+    spawnCommand(transform) {
         this.child = cross_spawn_1.default(...this.prepare);
         this.child.stdout && this.subscribe('stdout', this.child.stdout, transform);
         this.child.stderr && this.subscribe('stderr', this.child.stderr, transform);
@@ -193,29 +209,93 @@ class Command {
         });
         return this;
     }
-    pingAfter(pinger, condition) {
-    }
-    onIdle(optionsOrCallback, cb) {
+    setPinger(optionsOrCallback, onConnected) {
+        if (this.pinger)
+            return this;
         let options = optionsOrCallback;
         if (typeof optionsOrCallback === 'function') {
+            onConnected = optionsOrCallback;
+            optionsOrCallback = undefined;
+        }
+        else if (typeof optionsOrCallback === 'number') {
             options = {
-                done: optionsOrCallback
+                timeout: optionsOrCallback
             };
+        }
+        this.pinger = new pinger_1.Pinger({
+            name: this.command,
+            onConnected,
+            ...options
+        });
+        return this;
+    }
+    setTimer(optionsOrCallback, onCondition) {
+        if (this.timer)
+            return this;
+        let options = optionsOrCallback;
+        if (typeof optionsOrCallback === 'function') {
+            onCondition = optionsOrCallback;
+            optionsOrCallback = undefined;
         }
         else if (typeof optionsOrCallback === 'boolean') {
             options = {
                 interval: optionsOrCallback,
-                done: cb
             };
         }
-        this.timer = utils_1.createTimer({
+        this.timer = new timer_1.SimpleTimer({
             name: this.command,
-            onMessage: (m) => {
-                this.write(utils_1.colorize(m, 'yellow'));
-            },
+            onCondition,
             ...options
         });
+        const msg = `${this.command} timer expired before condition.`;
+        this.timer.on('timeout', () => this.write(utils_1.colorize(msg, 'yellow')));
         return this;
+    }
+    runConnected(nameOrOptions, as, commandArgs, initOptions) {
+        let cmd = nameOrOptions;
+        // lookup command or create.
+        if (typeof nameOrOptions === 'string')
+            cmd = this.spawnmon.commands.get(nameOrOptions);
+        // try to get from alias.
+        if (typeof as === 'string')
+            cmd = this.spawnmon.commands.get(as);
+        // if we get here this is a new command
+        // with args, options etc call parent add
+        // but specify not to index.
+        if (!cmd) {
+            // Just some defaults so the add function 
+            // knows how to handle. 
+            initOptions = {
+                indexed: false,
+                ...initOptions
+            };
+            const tuple = [nameOrOptions, as, commandArgs, initOptions];
+            // No need to worry about positions of args here
+            // the .add() method in the core will sort it out.
+            const add = this.spawnmon.add;
+            cmd = add(...tuple);
+            // if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
+            //   initOptions = commandArgs;
+            //   commandArgs = undefined;
+            // }
+            // if (typeof as !== 'string') {
+            //   if (Array.isArray(as)) {
+            //     commandArgs = as;
+            //     as = undefined;
+            //   }
+            //   else {
+            //     initOptions = as;
+            //   }
+            //   as = undefined;
+            // }
+            // const opts = initOptions as ICommandOptions;
+            // opts.command = nameOrOptions as string;
+            // opts.args = (commandArgs || []) as any[];
+            // opts.indexed = false;
+            // const aliasOrName = as || opts.command;
+            // cmd = new Command(initOptions as ICommandOptions, this.spawnmon);
+        }
+        return cmd;
     }
     /**
      * Runs the command.
@@ -224,8 +304,8 @@ class Command {
      */
     run(transform) {
         if (!this.options.delay)
-            return this.spawnCommnad(transform);
-        this.delayTimeoutId = setTimeout(() => this.spawnCommnad(transform), this.options.delay);
+            return this.spawnCommand(transform);
+        this.delayTimeoutId = setTimeout(() => this.spawnCommand(transform), this.options.delay);
         return this;
     }
     /**

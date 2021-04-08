@@ -2,11 +2,13 @@
 import { Subscription } from 'rxjs';
 import { ChildProcess } from 'child_process';
 import { Spawnmon } from './spawnmon';
-import { ICommandOptions, IMonitorOptions, TransformHandler } from './types';
 import { Pinger } from './pinger';
+import { SimpleTimer } from './timer';
+import { ICommandOptions, IPingerOptions, ISimpleTimerOptions, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 export declare class Command {
     private delayTimeoutId;
-    private timer;
+    timer: SimpleTimer;
+    pinger: Pinger;
     child: ChildProcess;
     subscriptions: Subscription[];
     options: ICommandOptions;
@@ -31,6 +33,11 @@ export declare class Command {
      * @param data the data to inspect for condensed format.
      */
     private format;
+    /**
+     * Updates the timer issuing a new tick for the counters.
+     *
+     * @param stop when true tells timer to stop.
+     */
     private updateTimer;
     /**
      * Subscribes to a child's stream.
@@ -45,7 +52,7 @@ export declare class Command {
      *
      * @param transform optional transform to past to streams.
      */
-    private spawnCommnad;
+    private spawnCommand;
     /**
      * Gets the process id if active.
      */
@@ -73,26 +80,76 @@ export declare class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
-    pingAfter(pinger: Pinger, condition: () => boolean): void;
     /**
-     * Calls a callback when condition is met and output is idle.
+    * Creates Pinger instance using default options with provided
+    * onConnected callback and timeout.
+    *
+    * @param timeout the timeout duration between tries.
+    * @param onConnected a callback to be called when connected to socket.
+    */
+    setPinger(timeout: number, onConnected: PingerHandler): this;
+    /**
+    * Creates Pinger instance using default options with provided on connected callback.
+    *
+    * @param onConnected a callback to be called when connected to socket.
+    */
+    setPinger(onConnected: PingerHandler): this;
+    /**
+    * Creates Pinger instance using the provided options.
+    *
+    * @param options the time Pinger configuration object.
+    */
+    setPinger(options: IPingerOptions): this;
+    /**
+     * Creates Timer using interval and onCondition callback.
      *
      * @param interval the time interval to ping at.
-     * @param cb a callback to be called when condition is met.
+     * @param onCondition a callback to be called when condition is met.
      */
-    onIdle(interval: number, cb: () => void): this;
+    setTimer(interval: number, onCondition: SimpleTimerHandler): this;
     /**
-    * Calls a callback when condition is met and output is idle.
+    * Creates Timer using onCondition callback.
     *
-    * @param cb a callback to be called when condition is met.
+    * @param onCondition a callback to be called when condition is met.
     */
-    onIdle(cb: () => void): this;
+    setTimer(onCondition: SimpleTimerHandler): this;
     /**
-    * Calls a callback when condition is met and output is idle.
+    * Creates Timer using the specified options for configuration.
     *
     * @param options the time timer configuration object.
     */
-    onIdle(options: IMonitorOptions): this;
+    setTimer(options: ISimpleTimerOptions): this;
+    /**
+   * Adds a new command to the queue.
+   *
+   * @param command the command to be executed.
+   * @param as an alias name for the command.
+   * @param args the arguments to be pased.
+   * @param options additional command options.
+   */
+    runConnected(command: string, as: string, args: string | string[], options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    /**
+     * Adds a new command to the queue.
+     *
+     * @param command the command to be executed.
+     * @param args the arguments to be pased.
+     * @param options additional command options.
+     */
+    runConnected(command: string, args: string | string[], options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    /**
+     * Adds a new command to the queue.
+     *
+     * @param command the command to be executed.
+     * @param options additional command options.
+     */
+    runConnected(command: string, options: Omit<ICommandOptions, 'command' | 'args'>): Command;
+    /**
+     * Adds existing Command to Spawnmon instance..
+     *
+     * @param command a command instance.
+     * @param as an optional alias for the command.
+     */
+    runConnected(command: Command, as?: string): Command;
     /**
      * Runs the command.
      *

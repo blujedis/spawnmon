@@ -12,6 +12,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./types"), exports);
 __exportStar(require("./pinger"), exports);
+__exportStar(require("./timer"), exports);
 __exportStar(require("./command"), exports);
 __exportStar(require("./spawnmon"), exports);
 //# sourceMappingURL=index.js.map

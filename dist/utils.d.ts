@@ -1,5 +1,4 @@
-import { Color, IMonitorOptions } from './types';
-export declare type SimpleTimer = ReturnType<typeof createTimer>;
+import { Color } from './types';
 export declare const NEWLINE_EXP: RegExp;
 /**
  * Detects line returns if match slices,
@@ -9,20 +8,6 @@ export declare const NEWLINE_EXP: RegExp;
  * @param line the line to be cleaned up.
  */
 export declare function chomp(line: any): any;
-/**
- * Simple timer monitor that watches update counts. Once
- * the counter goes stale and remains the same between
- * ticks of the "interval" we know then the stream is likely idle.
- *
- *
- * @param options define interval, done callback and callback to check if should exit.
- */
-export declare function createTimer(options?: IMonitorOptions): {
-    readonly running: boolean;
-    update: () => void;
-    start: () => void;
-    stop: () => void;
-};
 /**
  * Helper to colorize strings with ansi colors.
  *

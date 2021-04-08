@@ -2,11 +2,11 @@ import { Socket, SocketConstructorOpts } from 'net';
 import { EventEmitter } from 'events';
 import { PingerEvent, IPingerOptions, PingerHandler } from './types';
 
-const PINGER_DEFAULTS = {
+const PINGER_DEFAULTS: IPingerOptions = {
   host: '127.0.0.1',
   port: 3000,
   attempts: 10,
-  delay: 1800
+  timeout: 1800
 };
 
 export declare interface Pinger {
@@ -16,10 +16,11 @@ export declare interface Pinger {
 
 export class Pinger extends EventEmitter {
 
+  private timeoutId: NodeJS.Timeout;
+
   retries = 0;
   socket: Socket;
-  connected: boolean = false;
-  timeoutId: NodeJS.Timeout;
+  connected = false;
 
   options: IPingerOptions;
 
@@ -38,6 +39,9 @@ export class Pinger extends EventEmitter {
     }
 
     this.options = { ...PINGER_DEFAULTS, ...options };
+
+    if (this.options.onConnected)
+      this.on('connected', this.options.onConnected);
 
   }
 
@@ -92,13 +96,17 @@ export class Pinger extends EventEmitter {
       this.dispatch('failed');
       if (this.retries === this.options.attempts)
         return this.destroy();
-      this.timeoutId = setTimeout(() => this.retry(), this.options.delay);
+      this.timeoutId = setTimeout(() => this.retry(), this.options.timeout);
     });
 
     this.retry();
 
     return this;
 
+  }
+
+  stop() {
+    this.reset();
   }
 
   destroy() {

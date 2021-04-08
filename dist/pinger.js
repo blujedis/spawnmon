@@ -7,7 +7,7 @@ const PINGER_DEFAULTS = {
     host: '127.0.0.1',
     port: 3000,
     attempts: 10,
-    delay: 1800
+    timeout: 1800
 };
 class Pinger extends events_1.EventEmitter {
     constructor(portOrOptions, host, socketOptions) {
@@ -23,6 +23,8 @@ class Pinger extends events_1.EventEmitter {
             };
         }
         this.options = { ...PINGER_DEFAULTS, ...options };
+        if (this.options.onConnected)
+            this.on('connected', this.options.onConnected);
     }
     dispatch(event) {
         this.emit(event, this.retries, this);
@@ -69,10 +71,13 @@ class Pinger extends events_1.EventEmitter {
             this.dispatch('failed');
             if (this.retries === this.options.attempts)
                 return this.destroy();
-            this.timeoutId = setTimeout(() => this.retry(), this.options.delay);
+            this.timeoutId = setTimeout(() => this.retry(), this.options.timeout);
         });
         this.retry();
         return this;
+    }
+    stop() {
+        this.reset();
     }
     destroy() {
         this.dispatch('destroyed');
