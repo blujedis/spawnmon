@@ -7,7 +7,7 @@ import { SimpleTimer } from './timer';
 // COMMAND
 //----------------------------------------
 
-export type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close' | 'stdin';
+export type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close';
 
 export interface ITransformMetadata {
   command: string;
@@ -27,9 +27,9 @@ export interface ICommandOptions extends SpawnOptions {
   mute?: boolean;
   condensed?: boolean;
   delay?: number;
-  pinger?: Pinger | IPingerOptions;
-  timer?: SimpleTimer | ISimpleTimerOptions;
-  indexed?: boolean; // when false is not pushed to indexed runnable commands.
+  pinger?: IPingerOptions | PingerHandler;
+  timer?:  ISimpleTimerOptions | SimpleTimerHandler;
+
 }
 
 export interface ISpawnmonOptions extends ProcessEnvOptions {
@@ -42,6 +42,9 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
   prefixAlign?: 'left' | 'right' | 'center';
   prefixFill?: string;          // the repeat fill when matching prefix width.
   condensed?: boolean;          // when true console output strips empty lines.
+  handleSignals?: boolean;      // when true handles SIGINT, SIGTERM, SIGHUP signals...
+  unformatted?: boolean; // when true logging is output without formatting.
+  maxProcesses?: number;  // the max number of spawned child processes. 
 }
 
 // PINGER
@@ -57,6 +60,7 @@ export interface IPinger {
 }
 
 export interface IPingerOptions extends SocketConstructorOpts {
+  active?: boolean;
   name?: string;  // updated to command name if not defined.
   host?: string;  // default 127.0.0.1
   port?: number;  // default 3000
@@ -70,15 +74,24 @@ export interface IPingerOptions extends SocketConstructorOpts {
 
 export type SimpleTimerEvent = 'timeout' | 'condition' | 'update';
 
-export type SimpleTimerHandler = (elapased?: number, timer?: SimpleTimer) => void;
+export type SimpleTimerHandler = (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => void;
 
 export interface ISimpleTimerOptions {
+  active?: boolean;  // timer inits w/ ea. command but may not need to be active.
   name?: string;    // updated to command name if not defined.
   interval?: number;
   timeout?: number;
   // called to check if condition is met, return true if it is.
-  condition?: (previous?: number, current?: number, timer?: SimpleTimer) => boolean;
+  condition?: (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => boolean;
   onCondition?: SimpleTimerHandler;
+}
+
+export interface ISimpleTimerCounters {
+  counter: number;
+  previousCounter: number;
+  startTime: number;
+  endTime: number;
+  elasped: number;
 }
 
 // MISC

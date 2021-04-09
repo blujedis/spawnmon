@@ -93,3 +93,27 @@ export function truncate(str: string, max = 0, char = '...') {
     return str;
   return str.substr(0, max - char.length) + char;
 }
+
+/**
+ * Simple method to clone a class.
+ * 
+ * @param instance the class instance you wish to clone.
+ */
+export function cloneClass<T>(instance: T) {
+  return Object.assign(
+    Object.create(Object.getPrototypeOf(instance)),
+    instance
+  );
+}
+
+/**
+ * Just creates a styled error message.
+ * 
+ * @param err the error message or Error instance.
+ */
+export function createError(err: string | (Error & Record<string, any>)) {
+  if (!(err instanceof Error))
+    err = new Error(err);
+  err.message = colorize(err.message, 'red');
+  return err;
+}

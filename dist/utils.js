@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
+exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const strip_ansi_1 = __importDefault(require("strip-ansi"));
 exports.NEWLINE_EXP = /\r?\n$/u;
@@ -96,4 +96,13 @@ function truncate(str, max = 0, char = '...') {
     return str.substr(0, max - char.length) + char;
 }
 exports.truncate = truncate;
+/**
+ * Simple method to clone a class.
+ *
+ * @param instance the class instance you wish to clone.
+ */
+function cloneClass(instance) {
+    return Object.assign(Object.create(Object.getPrototypeOf(instance)), instance);
+}
+exports.cloneClass = cloneClass;
 //# sourceMappingURL=utils.js.map

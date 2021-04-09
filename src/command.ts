@@ -1,51 +1,63 @@
 
 import spawn from 'cross-spawn';
-import { fromEvent, Subscription } from 'rxjs';
+import { fromEvent, Subject, Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ChildProcess, SpawnOptions } from 'child_process';
 import { Readable, Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import treekill from 'tree-kill';
-import { chomp, isBlankLine, colorize } from './utils';
+import { chomp, isBlankLine, colorize, cloneClass, createError } from './utils';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
 import { EventSubscriptionType, ICommandOptions, IPingerOptions, ISimpleTimerOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 
-const COMMON_DEFAULTS: ICommandOptions = {
+const COMMAND_DEFAULTS: ICommandOptions = {
   command: '',
   args: [],
   condensed: false,
-  delay: 0,
-  indexed: true
+  delay: 0
 };
 
 export class Command {
 
   private delayTimeoutId: NodeJS.Timeout;
 
+  spawnmon: Spawnmon;
+  parent: Command;
+  process: ChildProcess;
+  commands: Map<string, Command> = new Map();
+
   timer: SimpleTimer;
   pinger: Pinger;
-  child: ChildProcess;
   subscriptions: Subscription[] = [];
+  stdin: Writable;
 
   options: ICommandOptions;
-  spawnmon: Spawnmon;
-  stdin: any;
 
-  constructor(options: ICommandOptions, spawnmon?: Spawnmon) {
+  constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command) {
+
     const { prefixDefaultColor, condensed } = spawnmon.options;
-    options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
-    let { pinger, timer } = options;
-    if (pinger) {
-      if (!(pinger instanceof Pinger))
-        pinger = new Pinger(pinger as IPingerOptions);
-    }
-    if (timer) {
-      if (!(timer instanceof SimpleTimer))
-        timer = new SimpleTimer(timer as ISimpleTimerOptions);
-    }
+    options = { ...COMMAND_DEFAULTS, color: prefixDefaultColor, condensed, timer: {}, pinger: {}, ...options };
+
+    const { pinger, timer } = options;
+
+    // Timer/Pinger set to "active: false" because
+    // when used internally must call method 
+    // to enable as active.
+
+    this.pinger = new Pinger(typeof pinger === 'function'
+      ? { active: false, onConnected: pinger }
+      : { active: false, ...pinger });
+
+
+    this.timer = new SimpleTimer(typeof timer === 'function'
+      ? { active: false, onCondition: timer as SimpleTimerHandler }
+      : { active: false, ...timer }) as SimpleTimer;
+
     this.options = options;
     this.spawnmon = spawnmon;
+    this.parent = parent;
+
   }
 
   /**
@@ -61,70 +73,17 @@ export class Command {
     return [command, args, options];
   }
 
-  private write(data: string | Error, shouldKill = false) {
-    if (typeof data === 'string')
-      data = this.format(data);
-    this.updateTimer(shouldKill);
-    this.spawnmon.write(data, shouldKill);
-  }
-
-  /**
-   * Gets the line prefix if enabled.
-   */
-  private getPrefix(unpadded = false) {
-    const prefix = this.spawnmon.formatPrefix(this.command, this.options.color);
-    if (unpadded)
-      return prefix;
-    return prefix + ' ';
-  }
-
-  /**
-   * Checks if out put should be condensed.
-   * 
-   * @param data the data to inspect for condensed format.
-   */
-  private format(data: string) {
-
-    const prefix = this.getPrefix();
-
-    //  data = data.replace(/\u2026/g, '...');
-
-    let lines = data.split('\n');
-    const lastIndex = lines.length - 1;
-
-    lines = lines.reduce((results, line, index) => {
-
-      // Empty line condensed on ignore it.
-      if (this.options.condensed && (isBlankLine(line) || !line.length))
-        return results;
-
-      const inspect = line.replace(/[^\w]/gi, '').trim();
-
-      if (lines.length > 1 && lastIndex === index && !inspect.length)
-        return results;
-
-      // Ansi escape resets color that may wrap from preceeding line.
-      line = '\u001b[0m' + prefix + line;
-
-      return [...results, line.trim()];
-
-    }, []);
-
-    // need to tweak this a bit so we don't get random prefix with blank line.
-    return lines.join('\n').trim();
-
-  }
-
   /**
    * Updates the timer issuing a new tick for the counters.
    * 
    * @param stop when true tells timer to stop. 
    */
-  private updateTimer(stop = false) {
-    if (!this.timer) return;
+  private updateTimer(data: string | Error, stop = false) {
+    if (!this.timer)
+      return;
     if (stop)
       return this.timer.stop();
-    this.timer.update();
+    this.timer.update(data);
   }
 
   /**
@@ -147,32 +106,22 @@ export class Command {
       from
     };
 
-    if (from === 'stdin') {
-
-      fromEvent<string | Buffer>(input as Readable, 'data')
-        .subscribe(v => {
-          if (this.stdin && this.child) {
-            console.log('got input - ', v.toString());
-            this.stdin.write(v.toString());
-          }
-        });
-    }
-
-    else if (from === 'error') {
+    if (from === 'error') {
       fromEvent<Error>(input as ChildProcess, 'error')
         .subscribe(err => {
           // DO NOT allow muting of errors.
-          this.child = undefined;
-          this.write(err, true);
+          this.process = undefined;
+          this.log(err, true);
         });
     }
 
     else if (from === 'close') {
-      fromEvent<number>(input as ChildProcess, 'close')
-        .subscribe(code => {
-          if (!this.options.mute)
-            this.write(`${this.command} exited with code ${code}`);
-          this.child = undefined;
+      fromEvent(input as ChildProcess, 'close')
+        .subscribe(([code, signal]) => {
+          // if not muted and not handled signal output.
+          if (!this.options.mute && !['SIGTERM', 'SIGINT', 'SIGHUP'].includes(signal))
+            this.log(`${this.command} exited with ${signal}`);
+          this.process = undefined;
         });
     }
 
@@ -180,10 +129,10 @@ export class Command {
       transform = transform || this.transform;
       subscription =
         fromEvent<string | Buffer>(input, 'data')
-          .pipe(map(e => transform(chomp(e), metadata)))
+          .pipe(map(e => transform(e, metadata)))
           .subscribe(v => {
             if (!this.options.mute)
-              this.write(v);
+              this.log(v);
           });
 
     }
@@ -198,17 +147,19 @@ export class Command {
    * @param transform optional transform to past to streams. 
    */
   private spawnCommand(transform?: TransformHandler) {
-    this.child = spawn(...this.prepare);
-    this.child.stdout && this.subscribe('stdout', this.child.stdout, transform);
-    this.child.stderr && this.subscribe('stderr', this.child.stderr, transform);
-    this.stdin = this.child.stdin;
+    this.process = spawn(...this.prepare);
+    this.process.stdout && this.subscribe('stdout', this.process.stdout, transform);
+    this.process.stderr && this.subscribe('stderr', this.process.stderr, transform);
+    this.stdin = this.process.stdin;
+    this.subscribe('close', this.process);
+    this.subscribe('error', this.process);
   }
 
   /**
    * Gets the process id if active.
    */
   get pid() {
-    return this.child.pid;
+    return this.process.pid;
   }
 
   /**
@@ -233,6 +184,29 @@ export class Command {
   }
 
   /**
+   * Log response from subscriptions.
+   * 
+   * @param data the data to be logged from the response.
+   * @param shouldKill variable indicating Spawnmon should kill children.
+   * @param shouldUpdate when true should update the timer which watches for idle commands
+   */
+  log(data: string | Error, shouldKill = false, shouldUpdate = true) {
+    if (shouldUpdate)
+      this.updateTimer(data, shouldKill);
+    this.spawnmon.log(data, this, shouldKill);
+  }
+
+  /**
+   * Gets the line prefix if enabled.
+   */
+  getPrefix(unpadded = false) {
+    const prefix = this.spawnmon.formatPrefix(this.command, this.options.color);
+    if (unpadded)
+      return prefix;
+    return prefix + ' ';
+  }
+
+  /**
    * Sets the options object.
    * 
    * @param options options object to update or set to.
@@ -246,183 +220,116 @@ export class Command {
     return this;
   }
 
+  mute() {
+    this.options.mute = true;
+    return this;
+  }
+
+  unmute() {
+    this.options.mute = false;
+    return this;
+  }
+
   /**
    * Unsubscribes from all subscriptions.
    */
   unsubscribe() {
     this.subscriptions.forEach(sub => {
-      if (!sub.closed)
-        sub.unsubscribe();
+      sub && !sub.closed && sub.unsubscribe();
     });
     return this;
   }
 
-  /**
-  * Creates Pinger instance using default options with provided
-  * onConnected callback and timeout.
-  * 
-  * @param timeout the timeout duration between tries.
-  * @param onConnected a callback to be called when connected to socket.
-  */
-  setPinger(timeout: number, onConnected: PingerHandler): this;
+  onConnected(nameOrCommand: string | Command) {
 
-  /**
-  * Creates Pinger instance using default options with provided on connected callback.
-  * 
-  * @param onConnected a callback to be called when connected to socket.
-  */
-  setPinger(onConnected: PingerHandler): this;
+  }
 
-  /**
-  * Creates Pinger instance using the provided options.
-  * 
-  * @param options the time Pinger configuration object.
-  */
-  setPinger(options: IPingerOptions): this;
-  setPinger(optionsOrCallback?: IPingerOptions | PingerHandler | number, onConnected?: PingerHandler) {
-
-    if (this.pinger)
-      return this;
-
-    let options = optionsOrCallback as IPingerOptions;
-
-    if (typeof optionsOrCallback === 'function') {
-      onConnected = optionsOrCallback;
-      optionsOrCallback = undefined;
-    }
-
-    else if (typeof optionsOrCallback === 'number') {
-      options = {
-        timeout: optionsOrCallback
-      };
-    }
-
-    this.pinger = new Pinger({
-      name: this.command,
-      onConnected,
-      ...options
-    });
-
-    return this;
+  onIdle(nameOrCommand: string | Command) {
 
   }
 
   /**
-   * Creates Timer using interval and onCondition callback.
+   * Adds command to a group.
    * 
-   * @param interval the time interval to ping at.
-   * @param onCondition a callback to be called when condition is met.
+   * @param name the name of the group to add the command to.
    */
-  setTimer(interval: number, onCondition: SimpleTimerHandler): SimpleTimer;
-
-  /**
-  * Creates Timer using onCondition callback.
-  * 
-  * @param onCondition a callback to be called when condition is met.
-  */
-  setTimer(onCondition: SimpleTimerHandler): SimpleTimer;
-
-  /**
-  * Creates Timer using the specified options for configuration.
-  * 
-  * @param options the time timer configuration object.
-  */
-  setTimer(options?: ISimpleTimerOptions): SimpleTimer;
-  setTimer(optionsOrCallback?: ISimpleTimerOptions | SimpleTimerHandler | number, onCondition?: SimpleTimerHandler) {
-
-    if (this.timer)
-      return this.timer;
-
-    let options = optionsOrCallback as ISimpleTimerOptions;
-
-    if (typeof optionsOrCallback === 'function') {
-      onCondition = optionsOrCallback;
-      optionsOrCallback = undefined;
-    }
-
-    else if (typeof optionsOrCallback === 'boolean') {
-      options = {
-        interval: optionsOrCallback,
-      };
-    }
-
-    this.timer = new SimpleTimer({
-      name: this.command,
-      onCondition,
-      ...options
-    });
-
-    const msg = `${this.command} timer expired before condition.`;
-    this.timer.on('timeout', () => this.write(colorize(msg, 'yellow')));
-
-    return this.timer;
-
+  group(name: string) {
+    this.spawnmon.updateGroup(name, this.command);
+    return this;
   }
 
   /**
-   * Adds a new command to the queue.
+   * Adds a new sub command.
    * 
-   * @param command the command to be executed.
+   * @param options the command configuration options.
+   */
+  add(options: ICommandOptions): Command;
+
+  /**
+  * Adds the command as a sub command.
+  * 
+  * @param command a command instance.
+  * @param as an alias name for the command.
+  */
+  add(command: Command, as?: string): Command;
+
+  /**
+   * Adds a new sub command.
+   * 
+   * @param command the sub command to be executed.
+   * @param args the arguments to be pased.
+   * @param as an alias name for the command.
+   */
+  add(command: string, args?: string | string[], as?: string): Command;
+
+  /**
+   * Adds a new sub command.
+   * 
+   * @param command the sub command to be executed.
    * @param args the arguments to be pased.
    * @param options additional command options.
    * @param as an alias name for the command.
    */
-  runConnected(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
 
-  /**
-   * Adds existing Command to Spawnmon instance..
-   * 
-   * @param command a command instance.
-   */
-  runConnected(command: Command): Command;
-
-  /**
-   * Adds a new command to the queue by options object.
-   * 
-   * @param options the command configuration obtions.
-   */
-  runConnected(options: ICommandOptions): Command;
-
-  runConnected(
-    nameOrOptions: string | ICommandOptions | Command,
+  add(
+    nameCommandOrOptions: string | ICommandOptions | Command,
     commandArgs?: string | string[],
-    initOptions?: Omit<ICommandOptions, 'command' | 'args'>,
+    initOptions?: Omit<ICommandOptions, 'command' | 'args'> | string,
     as?: string) {
 
-    let cmd = nameOrOptions as Command;
+    let cmd: Command;
 
-    // lookup command or create.
-    if (typeof nameOrOptions === 'string')
-      cmd = this.spawnmon.commands.get(nameOrOptions);
+    if (nameCommandOrOptions instanceof Command) {
+      const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameCommandOrOptions.command;
+      this.commands.set(aliasOrName, nameCommandOrOptions);
+      return this;
+    }
+
+    if (typeof initOptions === 'string') {
+      as = initOptions;
+      initOptions = undefined;
+    }
 
     // if we get here this is a new command
-    // with args, options etc call parent add
-    // but specify not to index.
-    if (!cmd && typeof nameOrOptions !== 'undefined') {
+    if (!cmd && typeof nameCommandOrOptions !== 'undefined') {
 
       // Just some defaults so the add function 
       // knows how to handle. 
       initOptions = {
-        indexed: false,
-        ...initOptions
-      };
-
-      // No need to worry about positions of args here
-      // the .add() method in the core will sort it out.
-      cmd = this.spawnmon.add(nameOrOptions as string, commandArgs, initOptions, as);
+        ...initOptions as ICommandOptions,
+      } as ICommandOptions;
 
     }
 
-    if (!cmd)
-      return null;
+    // ensure the parent for child is set
+    // to the current command.. 
+    if (cmd)
+      cmd.parent = this;
 
-    this.timer = this.timer || this.setTimer();
 
-    this.timer.on('condition', (elapsed) => {
-      console.log('Elapased time', (new Date(elapsed)).toISOString());
-    });
 
-    return cmd;
+    return this;
 
   }
 
@@ -432,6 +339,8 @@ export class Command {
    * @param transform optional tranform, handy when calling programatically.
    */
   run(transform?: TransformHandler) {
+    if (this.options.mute)
+      this.log(colorize(`command ${this.command} is muted.`, 'yellow'), false, false);
     if (!this.options.delay)
       return this.spawnCommand(transform);
     this.delayTimeoutId = setTimeout(() => this.spawnCommand(transform), this.options.delay);
@@ -442,11 +351,11 @@ export class Command {
    * Kills the command if process still exists.
    */
   kill(signal?: NodeJS.Signals, cb?: (err?: Error) => void) {
-    // not entirely need but...
+    // some cleanup not really needed.
     clearTimeout(this.delayTimeoutId);
     if (this.timer)
       this.timer.stop();
-    !!this.child && treekill(this.pid, signal, (err) => {
+    !!this.process && treekill(this.pid, signal, (err) => {
       if (cb) cb(err);
     });
   }

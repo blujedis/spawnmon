@@ -45,3 +45,9 @@ export declare function pad(str: string, dir: 'left' | 'right', spaces?: number)
  * @param char the trailing char when exceeds length.
  */
 export declare function truncate(str: string, max?: number, char?: string): string;
+/**
+ * Simple method to clone a class.
+ *
+ * @param instance the class instance you wish to clone.
+ */
+export declare function cloneClass<T>(instance: T): any;

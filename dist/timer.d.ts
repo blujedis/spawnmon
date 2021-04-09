@@ -6,20 +6,28 @@ export declare interface SimpleTimer {
     off(event: SimpleTimerEvent, handler: SimpleTimerHandler): this;
 }
 export declare class SimpleTimer extends EventEmitter {
-    private ctr;
-    private prevCtr;
+    private counter;
+    private previousCounter;
     private startTime;
     private endTime;
     private timeoutId;
     private intervalId;
     private initialized;
+    private lastUpdate;
     running: boolean;
     options: ISimpleTimerOptions;
-    constructor(options: ISimpleTimerOptions);
+    constructor(options?: ISimpleTimerOptions);
     private initTimeout;
     private testCondition;
     private finished;
-    update(): void;
+    get counters(): {
+        counter: number;
+        previousCounter: number;
+        startTime: number;
+        endTime: number;
+        elasped: number;
+    };
+    update(data: any): void;
     start(onCondition?: SimpleTimerHandler): void;
     stop(): void;
 }

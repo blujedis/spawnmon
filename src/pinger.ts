@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { PingerEvent, IPingerOptions, PingerHandler } from './types';
 
 const PINGER_DEFAULTS: IPingerOptions = {
+  active: true,
   host: '127.0.0.1',
   port: 3000,
   attempts: 10,
@@ -81,7 +82,17 @@ export class Pinger extends EventEmitter {
     return this.options.port;
   }
 
+  activate() {
+    this.options.active = true;
+  }
+
+  inactivate() {
+    this.options.active = false;
+  }
+
   start(onConnected?: (retries?: number, pinger?: Pinger) => void) {
+
+    if (!this.activate) return this;
 
     if (this.socket) return this;
 

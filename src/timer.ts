@@ -8,25 +8,27 @@ export declare interface SimpleTimer {
 }
 
 const TIMER_DEFAULTS: ISimpleTimerOptions = {
+  active: true,  
   name: 'anonymous',
-  interval: 2500, // ping every 2.5 seconds check update ctr has changed.
-  timeout: 15000 // after 15 seconds shut'er down.
+  interval: 1800, // ping at this interval on condition met.
+  timeout: 20000 // after 20 seconds shut'er down to be safe, should be plenty.
 };
 
 export class SimpleTimer extends EventEmitter {
 
-  private ctr = 0;
-  private prevCtr = 0;
+  private counter = 0;
+  private previousCounter = 0;
   private startTime = 0;
   private endTime = 0;
   private timeoutId;
   private intervalId;
   private initialized = false;
+  private lastUpdate: any;
   running = false;
 
   options: ISimpleTimerOptions;
 
-  constructor(options: ISimpleTimerOptions) {
+  constructor(options?: ISimpleTimerOptions) {
     super();
     options = { ...TIMER_DEFAULTS, ...options };
     this.options = options;
@@ -36,33 +38,51 @@ export class SimpleTimer extends EventEmitter {
 
   private initTimeout() {
     this.timeoutId = setTimeout(() => {
-      stop();
-      this.emit('expired', this.endTime - this.startTime, this);
+      this.emit('expired', this.lastUpdate, this.endTime - this.startTime, this);
+      this.stop();
     }, this.options.timeout);
   }
 
   private testCondition(): boolean {
-    const previous = this.prevCtr;
-    const current = this.ctr;
     if (this.options.onCondition)
-      return this.options.condition(previous, current, this.intervalId);
-    return this.initialized && current === previous;
+      return this.options.condition(this.lastUpdate, this.counters, this);
+    return this.initialized && this.counter === this.previousCounter;
   }
 
   private finished() {
-    this.emit('condition', this.endTime - this.startTime, this);
+    this.endTime = Date.now();
+    this.emit('condition', this.lastUpdate, this.counters, this);
     this.stop();
   }
 
-  update() {
+  get counters() {
+    return {
+      counter: this.counter,
+      previousCounter: this.previousCounter,
+      startTime: this.startTime,
+      endTime: this.endTime,
+      elasped: this.endTime - this.startTime
+    };
+  }
+
+  activate() {
+    this.options.active = true;
+  }
+
+  inactivate() {
+    this.options.active = false;
+  }
+
+  update(data: any) {
     this.initialized = true;
-    this.ctr += 1;
-    this.emit('updated', Date.now() - this.startTime, this);
+    this.counter += 1;
+    this.lastUpdate = data;
+    this.emit('updated', data, Date.now() - this.startTime, this);
   }
 
   start(onCondition?: SimpleTimerHandler) {
-    if (this.running) return; // already running stop first.
-    if (this.intervalId) clearInterval(this.intervalId);
+    if (this.running || !this.options.active)
+      return;
     if (onCondition)
       this.on('condition', onCondition);
     this.startTime = Date.now();
@@ -71,7 +91,7 @@ export class SimpleTimer extends EventEmitter {
     this.intervalId = setInterval(() => {
       if (this.testCondition())
         return this.finished();
-      this.prevCtr = this.ctr;
+      this.previousCounter = this.counter;
     }, this.options.interval);
 
   }
@@ -79,10 +99,11 @@ export class SimpleTimer extends EventEmitter {
   stop() {
     clearInterval(this.intervalId);
     clearInterval(this.timeoutId);
-    this.ctr = 0;
-    this.prevCtr = 0;
+    this.counter = 0;
+    this.previousCounter = 0;
     this.running = false;
     this.initialized = false;
+    this.lastUpdate = undefined;
   }
 
 }

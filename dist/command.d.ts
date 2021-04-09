@@ -1,20 +1,23 @@
 /// <reference types="node" />
 import { Subscription } from 'rxjs';
 import { ChildProcess } from 'child_process';
+import { Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-import { ICommandOptions, IPingerOptions, ISimpleTimerOptions, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
+import { ICommandOptions, TransformHandler } from './types';
 export declare class Command {
     private delayTimeoutId;
+    spawnmon: Spawnmon;
+    child: Spawnmon;
+    parent: Command;
+    process: ChildProcess;
     timer: SimpleTimer;
     pinger: Pinger;
-    child: ChildProcess;
     subscriptions: Subscription[];
+    stdin: Writable;
     options: ICommandOptions;
-    spawnmon: Spawnmon;
-    stdin: any;
-    constructor(options: ICommandOptions, spawnmon?: Spawnmon);
+    constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command);
     /**
      * Prepares options and command arguments.
      * Ensures we're always getting the lastest.
@@ -22,17 +25,6 @@ export declare class Command {
      * object for the user.
      */
     private get prepare();
-    private write;
-    /**
-     * Gets the line prefix if enabled.
-     */
-    private getPrefix;
-    /**
-     * Checks if out put should be condensed.
-     *
-     * @param data the data to inspect for condensed format.
-     */
-    private format;
     /**
      * Updates the timer issuing a new tick for the counters.
      *
@@ -70,76 +62,59 @@ export declare class Command {
      */
     get transform(): TransformHandler;
     /**
+     * Log response from subscriptions.
+     *
+     * @param data the data to be logged from the response.
+     * @param shouldKill variable indicating Spawnmon should kill children.
+     * @param shouldUpdate when true should update the timer which watches for idle commands
+     */
+    log(data: string | Error, shouldKill?: boolean, shouldUpdate?: boolean): void;
+    /**
+     * Gets the line prefix if enabled.
+     */
+    getPrefix(unpadded?: boolean): string;
+    /**
      * Sets the options object.
      *
      * @param options options object to update or set to.
      * @param merge when true options are merged with existing.
      */
     setOptions(options: ICommandOptions, merge?: boolean): this;
+    mute(): this;
+    unmute(): this;
     /**
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
     /**
-    * Creates Pinger instance using default options with provided
-    * onConnected callback and timeout.
+    * Runs the specified command when idle.
     *
-    * @param timeout the timeout duration between tries.
-    * @param onConnected a callback to be called when connected to socket.
+    * @param command a command instance.
     */
-    setPinger(timeout: number, onConnected: PingerHandler): this;
+    onIdle(command: Command): Command;
     /**
-    * Creates Pinger instance using default options with provided on connected callback.
-    *
-    * @param onConnected a callback to be called when connected to socket.
-    */
-    setPinger(onConnected: PingerHandler): this;
-    /**
-    * Creates Pinger instance using the provided options.
-    *
-    * @param options the time Pinger configuration object.
-    */
-    setPinger(options: IPingerOptions): this;
-    /**
-     * Creates Timer using interval and onCondition callback.
+     * Runs a command when idle after creating using options.
      *
-     * @param interval the time interval to ping at.
-     * @param onCondition a callback to be called when condition is met.
+     * @param options the command configuration obtions.
      */
-    setTimer(interval: number, onCondition: SimpleTimerHandler): SimpleTimer;
+    onIdle(options: ICommandOptions): Command;
     /**
-    * Creates Timer using onCondition callback.
-    *
-    * @param onCondition a callback to be called when condition is met.
-    */
-    setTimer(onCondition: SimpleTimerHandler): SimpleTimer;
+     * Runs the new command when idle.
+     *
+     * @param command the command to be executed.
+     * @param args the arguments to be pased.
+     * @param as an alias name for the command.
+     */
+    onIdle(command: string, args?: string | string[], as?: string): Command;
     /**
-    * Creates Timer using the specified options for configuration.
-    *
-    * @param options the time timer configuration object.
-    */
-    setTimer(options?: ISimpleTimerOptions): SimpleTimer;
-    /**
-     * Adds a new command to the queue.
+     * Runs the new command when idle.
      *
      * @param command the command to be executed.
      * @param args the arguments to be pased.
      * @param options additional command options.
      * @param as an alias name for the command.
      */
-    runConnected(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
-    /**
-     * Adds existing Command to Spawnmon instance..
-     *
-     * @param command a command instance.
-     */
-    runConnected(command: Command): Command;
-    /**
-     * Adds a new command to the queue by options object.
-     *
-     * @param options the command configuration obtions.
-     */
-    runConnected(options: ICommandOptions): Command;
+    onIdle(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
     /**
      * Runs the command.
      *

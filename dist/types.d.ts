@@ -4,7 +4,7 @@ import { StylesType, StyleFunction } from 'ansi-colors';
 import { SocketConstructorOpts } from 'net';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-export declare type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close' | 'stdin';
+export declare type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close';
 export interface ITransformMetadata {
     command: string;
     from: EventSubscriptionType;
@@ -21,9 +21,8 @@ export interface ICommandOptions extends SpawnOptions {
     mute?: boolean;
     condensed?: boolean;
     delay?: number;
-    pinger?: Pinger | IPingerOptions;
-    timer?: SimpleTimer | ISimpleTimerOptions;
-    indexed?: boolean;
+    pinger?: Pinger | IPingerOptions | PingerHandler;
+    timer?: SimpleTimer | ISimpleTimerOptions | SimpleTimerHandler;
 }
 export interface ISpawnmonOptions extends ProcessEnvOptions {
     writestream?: NodeJS.WritableStream;
@@ -35,6 +34,9 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
     prefixAlign?: 'left' | 'right' | 'center';
     prefixFill?: string;
     condensed?: boolean;
+    handleSignals?: boolean;
+    unformatted?: boolean;
+    maxProcesses?: number;
 }
 export declare type PingerEvent = 'retry' | 'failed' | 'connected' | 'destroyed';
 export declare type PingerHandler = (retries?: number, pinger?: Pinger) => void;
@@ -51,12 +53,19 @@ export interface IPingerOptions extends SocketConstructorOpts {
     onConnected?: PingerHandler;
 }
 export declare type SimpleTimerEvent = 'timeout' | 'condition' | 'update';
-export declare type SimpleTimerHandler = (elapased?: number, timer?: SimpleTimer) => void;
+export declare type SimpleTimerHandler = (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => void;
 export interface ISimpleTimerOptions {
     name?: string;
     interval?: number;
     timeout?: number;
-    condition?: (previous?: number, current?: number, timer?: SimpleTimer) => boolean;
+    condition?: (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => boolean;
     onCondition?: SimpleTimerHandler;
+}
+export interface ISimpleTimerCounters {
+    counter: number;
+    previousCounter: number;
+    startTime: number;
+    endTime: number;
+    elasped: number;
 }
 export declare type Color = keyof StylesType<StyleFunction>;
