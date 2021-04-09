@@ -51,3 +51,9 @@ export declare function truncate(str: string, max?: number, char?: string): stri
  * @param instance the class instance you wish to clone.
  */
 export declare function cloneClass<T>(instance: T): any;
+/**
+ * Just creates a styled error message.
+ *
+ * @param err the error message or Error instance.
+ */
+export declare function createError(err: string | (Error & Record<string, any>)): Error & Record<string, any>;

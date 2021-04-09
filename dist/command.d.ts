@@ -9,9 +9,9 @@ import { ICommandOptions, TransformHandler } from './types';
 export declare class Command {
     private delayTimeoutId;
     spawnmon: Spawnmon;
-    child: Spawnmon;
     parent: Command;
     process: ChildProcess;
+    spawnmonChild: Spawnmon;
     timer: SimpleTimer;
     pinger: Pinger;
     subscriptions: Subscription[];
@@ -50,6 +50,10 @@ export declare class Command {
      */
     get pid(): number;
     /**
+     * Gets the command's alias.
+     */
+    get name(): string;
+    /**
      * Gets the defined command name itself.
      */
     get command(): string;
@@ -86,35 +90,50 @@ export declare class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
+    onPinged(nameOrCommand: string | Command): void;
+    onIdle(nameOrCommand: string | Command): void;
     /**
-    * Runs the specified command when idle.
+     * Adds command to a group(s).
+     *
+     * @param groups the name of the group(s) to add the command to.
+     */
+    assign(...groups: string[]): this;
+    /**
+     * Unassigns a command from group(s).
+     *
+     * @param groups the groups to remove/unassign the command from.
+     */
+    unassign(...groups: string[]): void;
+    /**
+     * Adds a new sub command.
+     *
+     * @param options the command configuration options.
+     */
+    child(options: ICommandOptions): Command;
+    /**
+    * Adds the command as a sub command.
     *
     * @param command a command instance.
+    * @param as an alias name for the command.
     */
-    onIdle(command: Command): Command;
+    child(command: Command, as?: string): Command;
     /**
-     * Runs a command when idle after creating using options.
+     * Adds a new sub command.
      *
-     * @param options the command configuration obtions.
-     */
-    onIdle(options: ICommandOptions): Command;
-    /**
-     * Runs the new command when idle.
-     *
-     * @param command the command to be executed.
+     * @param command the sub command to be executed.
      * @param args the arguments to be pased.
      * @param as an alias name for the command.
      */
-    onIdle(command: string, args?: string | string[], as?: string): Command;
+    child(command: string, args?: string | string[], as?: string): Command;
     /**
-     * Runs the new command when idle.
+     * Adds a new sub command.
      *
-     * @param command the command to be executed.
+     * @param command the sub command to be executed.
      * @param args the arguments to be pased.
      * @param options additional command options.
      * @param as an alias name for the command.
      */
-    onIdle(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+    child(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
     /**
      * Runs the command.
      *

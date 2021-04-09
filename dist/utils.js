@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
+exports.createError = exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const strip_ansi_1 = __importDefault(require("strip-ansi"));
 exports.NEWLINE_EXP = /\r?\n$/u;
@@ -105,4 +105,16 @@ function cloneClass(instance) {
     return Object.assign(Object.create(Object.getPrototypeOf(instance)), instance);
 }
 exports.cloneClass = cloneClass;
+/**
+ * Just creates a styled error message.
+ *
+ * @param err the error message or Error instance.
+ */
+function createError(err) {
+    if (!(err instanceof Error))
+        err = new Error(err);
+    err.message = colorize(err.message, 'red');
+    return err;
+}
+exports.createError = createError;
 //# sourceMappingURL=utils.js.map

@@ -21,8 +21,8 @@ export interface ICommandOptions extends SpawnOptions {
     mute?: boolean;
     condensed?: boolean;
     delay?: number;
-    pinger?: Pinger | IPingerOptions | PingerHandler;
-    timer?: SimpleTimer | ISimpleTimerOptions | SimpleTimerHandler;
+    pinger?: IPingerOptions | PingerHandler;
+    timer?: ISimpleTimerOptions | SimpleTimerHandler;
 }
 export interface ISpawnmonOptions extends ProcessEnvOptions {
     writestream?: NodeJS.WritableStream;
@@ -45,6 +45,7 @@ export interface IPinger {
     off(event: PingerEvent, handler: PingerHandler): void;
 }
 export interface IPingerOptions extends SocketConstructorOpts {
+    active?: boolean;
     name?: string;
     host?: string;
     port?: number;
@@ -55,6 +56,7 @@ export interface IPingerOptions extends SocketConstructorOpts {
 export declare type SimpleTimerEvent = 'timeout' | 'condition' | 'update';
 export declare type SimpleTimerHandler = (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => void;
 export interface ISimpleTimerOptions {
+    active?: boolean;
     name?: string;
     interval?: number;
     timeout?: number;

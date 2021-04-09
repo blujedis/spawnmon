@@ -12,7 +12,7 @@ const tree_kill_1 = __importDefault(require("tree-kill"));
 const utils_1 = require("./utils");
 const pinger_1 = require("./pinger");
 const timer_1 = require("./timer");
-const COMMON_DEFAULTS = {
+const COMMAND_DEFAULTS = {
     command: '',
     args: [],
     condensed: false,
@@ -22,14 +22,17 @@ class Command {
     constructor(options, spawnmon, parent) {
         this.subscriptions = [];
         const { prefixDefaultColor, condensed } = spawnmon.options;
-        options = { ...COMMON_DEFAULTS, color: prefixDefaultColor, condensed, ...options };
-        let { pinger, timer } = options;
-        if (pinger && !(pinger instanceof pinger_1.Pinger))
-            pinger = new pinger_1.Pinger(typeof pinger === 'function' ? { onConnected: pinger } : pinger);
-        if (timer && !(timer instanceof pinger_1.Pinger))
-            timer = new timer_1.SimpleTimer(typeof timer === 'function' ? { onCondition: timer } : timer);
-        this.pinger = pinger;
-        this.timer = timer;
+        options = { ...COMMAND_DEFAULTS, color: prefixDefaultColor, condensed, timer: {}, pinger: {}, ...options };
+        const { pinger, timer } = options;
+        // Timer/Pinger set to "active: false" because
+        // when used internally must call method 
+        // to enable as active.
+        this.pinger = new pinger_1.Pinger(typeof pinger === 'function'
+            ? { active: false, onConnected: pinger }
+            : { active: false, ...pinger });
+        this.timer = new timer_1.SimpleTimer(typeof timer === 'function'
+            ? { active: false, onCondition: timer }
+            : { active: false, ...timer });
         this.options = options;
         this.spawnmon = spawnmon;
         this.parent = parent;
@@ -71,7 +74,7 @@ class Command {
         if (this.timer && !this.timer.running)
             this.timer.start();
         const metadata = {
-            command: this.command,
+            command: this.name,
             from
         };
         if (from === 'error') {
@@ -87,7 +90,7 @@ class Command {
                 .subscribe(([code, signal]) => {
                 // if not muted and not handled signal output.
                 if (!this.options.mute && !['SIGTERM', 'SIGINT', 'SIGHUP'].includes(signal))
-                    this.log(`${this.command} exited with ${signal}`);
+                    this.log(`${this.name} exited with ${signal}`);
                 this.process = undefined;
             });
         }
@@ -123,6 +126,12 @@ class Command {
         return this.process.pid;
     }
     /**
+     * Gets the command's alias.
+     */
+    get name() {
+        return this.options.as || this.options.command;
+    }
+    /**
      * Gets the defined command name itself.
      */
     get command() {
@@ -156,7 +165,7 @@ class Command {
      * Gets the line prefix if enabled.
      */
     getPrefix(unpadded = false) {
-        const prefix = this.spawnmon.formatPrefix(this.command, this.options.color);
+        const prefix = this.spawnmon.getPrefix(this.name, this.options.color);
         if (unpadded)
             return prefix;
         return prefix + ' ';
@@ -191,64 +200,41 @@ class Command {
         });
         return this;
     }
-    onIdle(nameOrOptions, commandArgs, initOptions, as) {
-        // if not spawnmon for onIdle commands create it.
-        if (!this.child)
-            this.child = new spawnmon_1.Spawnmon({ ...this.spawnmon.options });
-        let cmd = nameOrOptions;
-        // lookup command or create.
-        if (typeof nameOrOptions === 'string') {
-            const tmpCmd = this.spawnmon.commands.get(nameOrOptions);
-            if (tmpCmd) {
-                cmd = utils_1.cloneClass(cmd);
-                this.child.add(cmd);
-            }
-            else {
-                cmd = undefined; // set undefined existing command not found.
-            }
-        }
-        if (typeof initOptions === 'string') {
-            as = initOptions;
-            initOptions = undefined;
-        }
-        // if we get here this is a new command
-        if (!cmd && typeof nameOrOptions !== 'undefined') {
-            // Just some defaults so the add function 
-            // knows how to handle. 
-            initOptions = {
-                ...initOptions,
-            };
-            // No need to worry about positions of args here
-            // the .add() method in the core will sort it out.
-            cmd = this.child.add(nameOrOptions, commandArgs, initOptions, as);
-        }
-        // have to have a command at this point.
-        if (!cmd) {
-            this.log(utils_1.colorize(`onIdle requires command, none provided.`, 'yellow'));
-            return this;
-        }
-        // ensure the parent for child is set
-        // to the current command.. 
-        cmd.parent = this;
-        if (!this.timer)
-            this.timer = new timer_1.SimpleTimer();
-        // putting this here as a ref
-        // you can used the elapsed time 
-        // or last updated value to stream
-        // for creating an idle detection condition.
-        // elapsed is in ms. Return "true" to 
-        // exit out of the timer and call the 
-        // below listener 
-        // .on('condition', (update, counters, timer) => //run something.);
-        //
-        // METHOD PASSED TO TIMER
-        // onCondition: (update, counters, timer) => {
-        //   // do something here return true if should jump out of timer.
-        // },
-        this.timer.on('condition', (update, counters) => {
-            // run the nested spawnmon with our commands.
-            this.child.run();
+    onPinged(nameOrCommand) {
+    }
+    onIdle(nameOrCommand) {
+    }
+    /**
+     * Adds command to a group(s).
+     *
+     * @param groups the name of the group(s) to add the command to.
+     */
+    assign(...groups) {
+        groups.forEach(g => {
+            this.spawnmon.assign(g, this);
         });
+        return this;
+    }
+    /**
+     * Unassigns a command from group(s).
+     *
+     * @param groups the groups to remove/unassign the command from.
+     */
+    unassign(...groups) {
+        groups.forEach(g => {
+            this.spawnmon.unassign(g, this);
+        });
+    }
+    child(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
+        // Create Spawnmon Child instance to manage subcommands.
+        if (!this.spawnmonChild)
+            this.spawnmonChild = new spawnmon_1.Spawnmon({ ...this.spawnmon.options });
+        const cmd = this.spawnmon.create(nameCmdOrOpts, commandArgs, initOptsOrAs, as);
+        if (cmd) {
+            // update with this command as its parent.
+            cmd.parent = this;
+            // this.spawnmonChild.assign()
+        }
         return this;
     }
     /**
@@ -258,7 +244,7 @@ class Command {
      */
     run(transform) {
         if (this.options.mute)
-            this.log(utils_1.colorize(`command ${this.command} is muted.`, 'yellow'), false, false);
+            this.log(utils_1.colorize(`command ${this.name} is muted.`, 'yellow'), false, false);
         if (!this.options.delay)
             return this.spawnCommand(transform);
         this.delayTimeoutId = setTimeout(() => this.spawnCommand(transform), this.options.delay);

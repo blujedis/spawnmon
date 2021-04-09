@@ -19,6 +19,8 @@ export declare class Pinger extends EventEmitter {
     private finished;
     get host(): string;
     get port(): number;
+    activate(): void;
+    inactivate(): void;
     start(onConnected?: (retries?: number, pinger?: Pinger) => void): this;
     stop(): void;
     destroy(): void;

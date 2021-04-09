@@ -1,15 +1,15 @@
 
 import spawn from 'cross-spawn';
-import { fromEvent, Subject, Subscription } from 'rxjs';
+import { fromEvent, Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ChildProcess, SpawnOptions } from 'child_process';
 import { Readable, Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import treekill from 'tree-kill';
-import { chomp, isBlankLine, colorize, cloneClass, createError } from './utils';
+import { colorize, } from './utils';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-import { EventSubscriptionType, ICommandOptions, IPingerOptions, ISimpleTimerOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
+import { EventSubscriptionType, ICommandOptions, ITransformMetadata, SimpleTimerHandler, TransformHandler } from './types';
 
 const COMMAND_DEFAULTS: ICommandOptions = {
   command: '',
@@ -25,7 +25,7 @@ export class Command {
   spawnmon: Spawnmon;
   parent: Command;
   process: ChildProcess;
-  commands: Map<string, Command> = new Map();
+  spawnmonChild: Spawnmon;
 
   timer: SimpleTimer;
   pinger: Pinger;
@@ -102,7 +102,7 @@ export class Command {
       this.timer.start();
 
     const metadata: ITransformMetadata = {
-      command: this.command,
+      command: this.name,
       from
     };
 
@@ -120,7 +120,7 @@ export class Command {
         .subscribe(([code, signal]) => {
           // if not muted and not handled signal output.
           if (!this.options.mute && !['SIGTERM', 'SIGINT', 'SIGHUP'].includes(signal))
-            this.log(`${this.command} exited with ${signal}`);
+            this.log(`${this.name} exited with ${signal}`);
           this.process = undefined;
         });
     }
@@ -163,6 +163,13 @@ export class Command {
   }
 
   /**
+   * Gets the command's alias.
+   */
+  get name() {
+    return this.options.as || this.options.command;
+  }
+
+  /**
    * Gets the defined command name itself.
    */
   get command() {
@@ -200,7 +207,7 @@ export class Command {
    * Gets the line prefix if enabled.
    */
   getPrefix(unpadded = false) {
-    const prefix = this.spawnmon.formatPrefix(this.command, this.options.color);
+    const prefix = this.spawnmon.getPrefix(this.name, this.options.color);
     if (unpadded)
       return prefix;
     return prefix + ' ';
@@ -240,7 +247,7 @@ export class Command {
     return this;
   }
 
-  onConnected(nameOrCommand: string | Command) {
+  onPinged(nameOrCommand: string | Command) {
 
   }
 
@@ -249,13 +256,26 @@ export class Command {
   }
 
   /**
-   * Adds command to a group.
+   * Adds command to a group(s).
    * 
-   * @param name the name of the group to add the command to.
+   * @param groups the name of the group(s) to add the command to.
    */
-  group(name: string) {
-    this.spawnmon.updateGroup(name, this.command);
+  assign(...groups: string[]) {
+    groups.forEach(g => {
+      this.spawnmon.assign(g, this);
+    });
     return this;
+  }
+
+  /**
+   * Unassigns a command from group(s).
+   * 
+   * @param groups the groups to remove/unassign the command from.
+   */
+  unassign(...groups: string[]) {
+    groups.forEach(g => {
+      this.spawnmon.unassign(g, this);
+    });
   }
 
   /**
@@ -263,7 +283,7 @@ export class Command {
    * 
    * @param options the command configuration options.
    */
-  add(options: ICommandOptions): Command;
+  child(options: ICommandOptions): Command;
 
   /**
   * Adds the command as a sub command.
@@ -271,7 +291,7 @@ export class Command {
   * @param command a command instance.
   * @param as an alias name for the command.
   */
-  add(command: Command, as?: string): Command;
+  child(command: Command, as?: string): Command;
 
   /**
    * Adds a new sub command.
@@ -280,7 +300,7 @@ export class Command {
    * @param args the arguments to be pased.
    * @param as an alias name for the command.
    */
-  add(command: string, args?: string | string[], as?: string): Command;
+  child(command: string, args?: string | string[], as?: string): Command;
 
   /**
    * Adds a new sub command.
@@ -290,44 +310,27 @@ export class Command {
    * @param options additional command options.
    * @param as an alias name for the command.
    */
-  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+  child(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
 
-  add(
-    nameCommandOrOptions: string | ICommandOptions | Command,
+  child(
+    nameCmdOrOpts: string | ICommandOptions | Command,
     commandArgs?: string | string[],
-    initOptions?: Omit<ICommandOptions, 'command' | 'args'> | string,
+    initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
     as?: string) {
 
-    let cmd: Command;
+    // Create Spawnmon Child instance to manage subcommands.
+    if (!this.spawnmonChild)
+      this.spawnmonChild = new Spawnmon({ ...this.spawnmon.options });
 
-    if (nameCommandOrOptions instanceof Command) {
-      const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameCommandOrOptions.command;
-      this.commands.set(aliasOrName, nameCommandOrOptions);
-      return this;
-    }
+    const cmd = this.spawnmon.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
 
-    if (typeof initOptions === 'string') {
-      as = initOptions;
-      initOptions = undefined;
-    }
 
-    // if we get here this is a new command
-    if (!cmd && typeof nameCommandOrOptions !== 'undefined') {
-
-      // Just some defaults so the add function 
-      // knows how to handle. 
-      initOptions = {
-        ...initOptions as ICommandOptions,
-      } as ICommandOptions;
-
-    }
-
-    // ensure the parent for child is set
-    // to the current command.. 
-    if (cmd)
+    if (cmd) {
+      // update with this command as its parent.
       cmd.parent = this;
+      // this.spawnmonChild.assign()
 
-
+    }
 
     return this;
 
@@ -340,7 +343,7 @@ export class Command {
    */
   run(transform?: TransformHandler) {
     if (this.options.mute)
-      this.log(colorize(`command ${this.command} is muted.`, 'yellow'), false, false);
+      this.log(colorize(`command ${this.name} is muted.`, 'yellow'), false, false);
     if (!this.options.delay)
       return this.spawnCommand(transform);
     this.delayTimeoutId = setTimeout(() => this.spawnCommand(transform), this.options.delay);

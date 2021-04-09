@@ -27,6 +27,8 @@ export declare class SimpleTimer extends EventEmitter {
         endTime: number;
         elasped: number;
     };
+    activate(): void;
+    inactivate(): void;
     update(data: any): void;
     start(onCondition?: SimpleTimerHandler): void;
     stop(): void;

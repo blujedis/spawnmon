@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Spawnmon = void 0;
+exports.Spawnmon = exports.DEFAULT_GROUP_NAME = void 0;
 const command_1 = require("./command");
 const utils_1 = require("./utils");
 // Sorce color.
@@ -17,15 +17,18 @@ const SPAWNMON_DEFAULTS = {
     condensed: false,
     handleSignals: true
 };
+exports.DEFAULT_GROUP_NAME = 'default';
 class Spawnmon {
     constructor(options) {
-        this.commands = new Map();
         this.running = false;
         this.indexes = [];
         this.maxPrefix = 0; // updated before run.
+        this.commands = new Map();
+        this.groups = new Map();
         this.options = { ...SPAWNMON_DEFAULTS, ...options };
         if (this.options.handleSignals)
             this.handleSignals();
+        this.groups.set(exports.DEFAULT_GROUP_NAME, []);
     }
     /**
      * Sets the maximum allowable prefix length based on command names.
@@ -79,8 +82,8 @@ class Spawnmon {
         // Don't format output.
         if (this.options.unformatted)
             return output;
-        const cmd = command && this.getCommand(command);
-        let prefix = (cmd && this.formatPrefix(cmd.command, cmd.options.color)) || '';
+        const cmd = command && this.get(command);
+        let prefix = (cmd && this.getPrefix(cmd.command, cmd.options.color)) || '';
         const condensed = cmd && cmd.options.condensed;
         // grabbed from concurrently well played fellas!!!
         // what's funny is when I looked at their source
@@ -109,6 +112,12 @@ class Spawnmon {
         // need to tweak this a bit so we don't get random prefix with blank line.
         return output;
     }
+    /**
+     * Gets process id's of commands.
+     */
+    get pids() {
+        return [...this.commands.values()].map(cmd => cmd.pid);
+    }
     async log(data, command, shouldKill = false) {
         if (data instanceof Error)
             throw data;
@@ -122,40 +131,94 @@ class Spawnmon {
             this.kill();
     }
     /**
-     * Gets process id's of commands.
-     */
-    get pids() {
-        return [...this.commands.values()].map(cmd => cmd.pid);
-    }
-    /**
      * Essentially a lookup and normalizer in one to find your command.
      *
      * @param command the command name, alias or an instance of Command.
      */
-    getCommand(command) {
-        if (command instanceof command_1.Command) // nothing to do.
+    get(command) {
+        if (command instanceof command_1.Command)
             return command;
-        return this.commands.get(command);
+        return [...this.commands.values()] // lookup by name or an alias.
+            .find(cmd => cmd.name === command);
+    }
+    /**
+     * Checks if a the Spawnmon instance knows of the command.
+     *
+     * @param command the command name or Command instance.
+     */
+    has(command) {
+        const cmd = this.get(command);
+        return this.commands.has((cmd && cmd.command) || undefined);
+    }
+    /**
+     * Ensures that a command exists in the Spawnmon command instance.
+     *
+     * @param command the command to ensure.
+     */
+    ensure(command, as) {
+        const cmd = this.get(command);
+        if (!cmd)
+            throw utils_1.createError(`Failed to ensure unknown command.`);
+        cmd.options.as = as || cmd.command;
+        if (!this.has(cmd))
+            this.commands.set(cmd.command, cmd);
+        return this;
+    }
+    assign(group, commands, merge = false) {
+        if (typeof commands === 'string' || commands instanceof command_1.Command)
+            commands = [commands];
+        commands = commands.map(cmd => this.get(cmd).name);
+        if (merge)
+            commands = [...(this.groups.get(group) || []), ...commands];
+        this.groups.set(group, [...commands]);
+        return this;
+    }
+    unassign(groupOrCommand, commands) {
+        let groupName = exports.DEFAULT_GROUP_NAME;
+        // First arg is a group name.
+        if (typeof groupOrCommand === 'string' && this.groups.get(groupOrCommand)) {
+            groupName = groupOrCommand;
+        }
+        else {
+            commands = groupOrCommand;
+            groupOrCommand = undefined;
+        }
+        // ensure the command is of type Array.
+        if (typeof commands !== 'undefined' && !Array.isArray(commands))
+            commands = [commands];
+        let grp = this.groups.get(groupName || exports.DEFAULT_GROUP_NAME);
+        // At this point we need to have a group
+        if (!grp)
+            throw utils_1.createError(`Assign failed, group name ${groupOrCommand} is unknown.`);
+        // Ensure commands are string.
+        let cmds = commands.map(cmd => this.get(cmd).name);
+        cmds = grp.filter(k => !cmds.includes(k));
+        this.assign(groupOrCommand, cmds);
+        return this;
     }
     /**
      * Gets the index of a command.
      *
      * @param command the command name, alias or instance to get an index for.
+     * @param group the group to get the index of if none assumes the default.
      */
-    getIndex(command) {
+    getIndex(command, group = exports.DEFAULT_GROUP_NAME) {
         if (command instanceof command_1.Command)
             command = command.command;
-        return this.indexes.indexOf(command);
+        const indexes = this.groups.get(group);
+        if (!indexes)
+            throw utils_1.createError(`Group ${group} could NOT be found.`);
+        return indexes.indexOf(command);
     }
     /**
-     * Formats the prefix for logging to output stream.
+     * Gets and formats the prefix for logging to output stream.
      *
      * @param command the command to get and format prefix for.
      * @param color the color of the prefix if any.
      */
-    formatPrefix(command, color = this.options.prefixDefaultColor) {
+    getPrefix(command, color = this.options.prefixDefaultColor) {
         let prefix = '';
-        const cmd = this.getCommand(command);
+        const cmd = this.get(command);
         // prefix disabled or command is not auto runnable, return empty string.
         if (!this.options.prefix)
             return prefix;
@@ -176,41 +239,58 @@ class Spawnmon {
             prefix = utils_1.colorize(prefix, color);
         return prefix;
     }
-    add(nameOrOptions, commandArgs, initOptions, as) {
-        if (nameOrOptions instanceof command_1.Command) {
-            const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameOrOptions.command;
-            this.commands.set(aliasOrName, nameOrOptions);
-            this.indexes.push(nameOrOptions.command);
-            return nameOrOptions;
+    create(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
+        if (nameCmdOrOpts instanceof command_1.Command) {
+            const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameCmdOrOpts.command;
+            nameCmdOrOpts.options.as = aliasOrName;
+            this.commands.set(nameCmdOrOpts.name, nameCmdOrOpts);
+            return nameCmdOrOpts;
         }
-        if (typeof initOptions === 'string') {
-            as = initOptions;
-            initOptions = undefined;
+        if (typeof initOptsOrAs === 'string') {
+            as = initOptsOrAs;
+            initOptsOrAs = undefined;
         }
         if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
-            initOptions = commandArgs;
+            initOptsOrAs = commandArgs;
             commandArgs = undefined;
         }
-        let options = nameOrOptions;
+        let options = nameCmdOrOpts;
         // ensure an array.
         if (typeof commandArgs === 'string')
             commandArgs = [commandArgs];
         options = {
-            command: nameOrOptions,
+            command: nameCmdOrOpts,
             args: commandArgs,
-            ...initOptions
+            ...initOptsOrAs
         };
-        const cmd = new command_1.Command(options, this);
+        const cmd = new command_1.Command({ as, ...options }, this);
         const aliasOrName = as || cmd.command;
-        this.commands.set(aliasOrName, cmd);
-        this.indexes.push(aliasOrName);
+        cmd.options.as = aliasOrName;
+        this.commands.set(cmd.name, cmd);
         return cmd;
     }
-    run(...commands) {
-        if (!commands.length)
-            commands = [...this.commands.keys()];
-        // auto run ONLY indexed commands.
-        commands = commands.filter(c => this.indexes.includes(c));
+    add(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
+        const cmd = this.create(nameCmdOrOpts, commandArgs, initOptsOrAs, as);
+        if (this.has(cmd.name))
+            throw utils_1.createError(`Duplicate command ${cmd.name} detected.`);
+        // Add to default create.
+        cmd.assign(exports.DEFAULT_GROUP_NAME);
+        return this;
+    }
+    /**
+     * Removes a command from the instance. Not likely to be
+     * used but for good measure it's here, also removes from
+     * any assigned groups.
+     *
+     * @param command the command to be removed.
+     */
+    remove(command) {
+    }
+    run(group, ...commands) {
+        if (!this.groups.has(group))
+            commands.unshift(group);
+        const normalizedCommands = !commands.length ? this.groups.get(exports.DEFAULT_GROUP_NAME) : commands;
+        commands = this.groups.has(group) ? this.groups.get(group) : normalizedCommands;
         this.setMaxPrefix(commands);
         commands.forEach(key => {
             const command = this.commands.get(key);

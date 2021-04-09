@@ -70,147 +70,12 @@
 				<section class="tsd-panel tsd-index-panel">
 					<div class="tsd-index-content">
 						<section class="tsd-index-section ">
-							<h3>Functions</h3>
+							<h3>Classes</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-function tsd-parent-kind-module"><a href="pinger.html#default" class="tsd-kind-icon">default</a></li>
+								<li class="tsd-kind-class tsd-parent-kind-module"><a href="../classes/pinger.pinger-1.html" class="tsd-kind-icon">Pinger</a></li>
 							</ul>
 						</section>
 					</div>
-				</section>
-			</section>
-			<section class="tsd-panel-group tsd-member-group ">
-				<h2>Functions</h2>
-				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
-					<a name="default" class="tsd-anchor"></a>
-					<h3>default</h3>
-					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
-						<li class="tsd-signature tsd-kind-icon">default<span class="tsd-signature-symbol">(</span>port<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, host<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span>connect<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">SocketConstructorOpts</span><span class="tsd-signature-symbol"> &amp; </span><span class="tsd-signature-symbol">{ </span>delay<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>retries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>destroy<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">; </span>on<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><a href="types.html#pingdispatchevent" class="tsd-signature-type" data-tsd-kind="Type alias">PingDispatchEvent</a>, handler<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>tries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">{ readonly tries: number; readonly retries: number; readonly client: Socket; readonly events: { retry: any[]; retried: any[]; connected: any[]; destroyed: any[]; }; destroy: () &#x3D;&gt; void; on: (event: PingDispatchEvent, handler: (tries?: number, client?: Socket) &#x3D;&gt; void) &#x3D;&gt; ...; connect: (options?: SocketConstructorOpt...</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>client<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>events<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-symbol">{ </span>connected<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>destroyed<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>retried<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>retry<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>retries<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>tries<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span></li>
-					</ul>
-					<ul class="tsd-descriptions">
-						<li class="tsd-description">
-							<aside class="tsd-sources">
-								<ul>
-									<li>Defined in <a href="https://github.com/blujedis/spawnmon/blob/f6f2386/src/pinger.ts#L11">src/pinger.ts:11</a></li>
-								</ul>
-							</aside>
-							<div class="tsd-comment tsd-typography">
-								<div class="lead">
-									<p>Creates a socket and pings until connected specified tries are exhausted.</p>
-								</div>
-							</div>
-							<h4 class="tsd-parameters-title">Parameters</h4>
-							<ul class="tsd-parameters">
-								<li>
-									<h5>port: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> = 3000</span></h5>
-									<div class="tsd-comment tsd-typography">
-										<p>the port to ping if any.</p>
-									</div>
-								</li>
-								<li>
-									<h5><span class="tsd-flag ts-flagOptional">Optional</span> host: <span class="tsd-signature-type">string</span></h5>
-									<div class="tsd-comment tsd-typography">
-										<p>the host ping.</p>
-									</div>
-								</li>
-							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-symbol">{ </span>connect<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">SocketConstructorOpts</span><span class="tsd-signature-symbol"> &amp; </span><span class="tsd-signature-symbol">{ </span>delay<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>retries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">; </span>destroy<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">; </span>on<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><a href="types.html#pingdispatchevent" class="tsd-signature-type" data-tsd-kind="Type alias">PingDispatchEvent</a>, handler<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>tries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">{ readonly tries: number; readonly retries: number; readonly client: Socket; readonly events: { retry: any[]; retried: any[]; connected: any[]; destroyed: any[]; }; destroy: () &#x3D;&gt; void; on: (event: PingDispatchEvent, handler: (tries?: number, client?: Socket) &#x3D;&gt; void) &#x3D;&gt; ...; connect: (options?: SocketConstructorOpt...</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>client<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>events<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-symbol">{ </span>connected<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>destroyed<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>retried<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>retry<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>retries<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span><span class="tsd-signature-symbol">get </span>tries<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span></h4>
-							<ul class="tsd-parameters">
-								<li class="tsd-parameter">
-									<h5>connect<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">SocketConstructorOpts</span><span class="tsd-signature-symbol"> &amp; </span><span class="tsd-signature-symbol">{ </span>delay<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>retries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">SocketConstructorOpts</span><span class="tsd-signature-symbol"> &amp; </span><span class="tsd-signature-symbol">{ </span>delay<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>retries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5>options: <span class="tsd-signature-type">SocketConstructorOpts</span><span class="tsd-signature-symbol"> &amp; </span><span class="tsd-signature-symbol">{ </span>delay<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">; </span>retries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> }</span><span class="tsd-signature-symbol"> = {}</span></h5>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-								<li class="tsd-parameter">
-									<h5>destroy<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-								<li class="tsd-parameter">
-									<h5>on<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><a href="types.html#pingdispatchevent" class="tsd-signature-type" data-tsd-kind="Type alias">PingDispatchEvent</a>, handler<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>tries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">{ readonly tries: number; readonly retries: number; readonly client: Socket; readonly events: { retry: any[]; retried: any[]; connected: any[]; destroyed: any[]; }; destroy: () &#x3D;&gt; void; on: (event: PingDispatchEvent, handler: (tries?: number, client?: Socket) &#x3D;&gt; void) &#x3D;&gt; ...; connect: (options?: SocketConstructorOpt...</span></h5>
-									<ul class="tsd-parameters">
-										<li class="tsd-parameter-signature">
-											<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-type-literal">
-												<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><a href="types.html#pingdispatchevent" class="tsd-signature-type" data-tsd-kind="Type alias">PingDispatchEvent</a>, handler<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">(</span>tries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">{ readonly tries: number; readonly retries: number; readonly client: Socket; readonly events: { retry: any[]; retried: any[]; connected: any[]; destroyed: any[]; }; destroy: () &#x3D;&gt; void; on: (event: PingDispatchEvent, handler: (tries?: number, client?: Socket) &#x3D;&gt; void) &#x3D;&gt; ...; connect: (options?: SocketConstructorOpt...</span></li>
-											</ul>
-											<ul class="tsd-descriptions">
-												<li class="tsd-description">
-													<h4 class="tsd-parameters-title">Parameters</h4>
-													<ul class="tsd-parameters">
-														<li>
-															<h5>event: <a href="types.html#pingdispatchevent" class="tsd-signature-type" data-tsd-kind="Type alias">PingDispatchEvent</a></h5>
-														</li>
-														<li>
-															<h5>handler: <span class="tsd-signature-symbol">(</span>tries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></h5>
-															<ul class="tsd-parameters">
-																<li class="tsd-parameter-signature">
-																	<ul class="tsd-signatures tsd-kind-type-literal">
-																		<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span>tries<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span>, client<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">Socket</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
-																	</ul>
-																	<ul class="tsd-descriptions">
-																		<li class="tsd-description">
-																			<h4 class="tsd-parameters-title">Parameters</h4>
-																			<ul class="tsd-parameters">
-																				<li>
-																					<h5><span class="tsd-flag ts-flagOptional">Optional</span> tries: <span class="tsd-signature-type">number</span></h5>
-																				</li>
-																				<li>
-																					<h5><span class="tsd-flag ts-flagOptional">Optional</span> client: <span class="tsd-signature-type">Socket</span></h5>
-																				</li>
-																			</ul>
-																			<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
-																		</li>
-																	</ul>
-																</li>
-															</ul>
-														</li>
-													</ul>
-													<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">{ readonly tries: number; readonly retries: number; readonly client: Socket; readonly events: { retry: any[]; retried: any[]; connected: any[]; destroyed: any[]; }; destroy: () &#x3D;&gt; void; on: (event: PingDispatchEvent, handler: (tries?: number, client?: Socket) &#x3D;&gt; void) &#x3D;&gt; ...; connect: (options?: SocketConstructorOpt...</span></h4>
-												</li>
-											</ul>
-										</li>
-									</ul>
-								</li>
-								<li class="tsd-parameter">
-									<h5><span class="tsd-signature-symbol">get </span>client<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">Socket</span></h5>
-								</li>
-								<li class="tsd-parameter">
-									<h5><span class="tsd-signature-symbol">get </span>events<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-symbol">{ </span>connected<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>destroyed<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>retried<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span>retry<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> }</span></h5>
-								</li>
-								<li class="tsd-parameter">
-									<h5><span class="tsd-signature-symbol">get </span>retries<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">number</span></h5>
-								</li>
-								<li class="tsd-parameter">
-									<h5><span class="tsd-signature-symbol">get </span>tries<span class="tsd-signature-symbol">(): </span><span class="tsd-signature-type">number</span></h5>
-								</li>
-							</ul>
-						</li>
-					</ul>
 				</section>
 			</section>
 		</div>
@@ -224,13 +89,19 @@
 						<a href="cli.html">cli</a>
 					</li>
 					<li class=" tsd-kind-module">
+						<a href="command.html">command</a>
+					</li>
+					<li class=" tsd-kind-module">
 						<a href="index.html">index</a>
 					</li>
 					<li class="current tsd-kind-module">
 						<a href="pinger.html">pinger</a>
 					</li>
 					<li class=" tsd-kind-module">
-						<a href="runner.html">runner</a>
+						<a href="spawnmon.html">spawnmon</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="timer.html">timer</a>
 					</li>
 					<li class=" tsd-kind-module">
 						<a href="types.html">types</a>
@@ -242,8 +113,8 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-function tsd-parent-kind-module">
-						<a href="pinger.html#default" class="tsd-kind-icon">default</a>
+					<li class=" tsd-kind-class tsd-parent-kind-module">
+						<a href="../classes/pinger.pinger-1.html" class="tsd-kind-icon">Pinger</a>
 					</li>
 				</ul>
 			</nav>
@@ -255,11 +126,16 @@
 		<h2>Legend</h2>
 		<div class="tsd-legend-group">
 			<ul class="tsd-legend">
+				<li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li>
 				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
+				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
 				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
 			</ul>
 		</div>
 	</div>

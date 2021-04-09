@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimpleTimer = void 0;
 const events_1 = __importDefault(require("events"));
 const TIMER_DEFAULTS = {
+    active: true,
     name: 'anonymous',
     interval: 1800,
     timeout: 20000 // after 20 seconds shut'er down to be safe, should be plenty.
@@ -49,6 +50,12 @@ class SimpleTimer extends events_1.default {
             elasped: this.endTime - this.startTime
         };
     }
+    activate() {
+        this.options.active = true;
+    }
+    inactivate() {
+        this.options.active = false;
+    }
     update(data) {
         this.initialized = true;
         this.counter += 1;
@@ -56,7 +63,7 @@ class SimpleTimer extends events_1.default {
         this.emit('updated', data, Date.now() - this.startTime, this);
     }
     start(onCondition) {
-        if (this.running)
+        if (this.running || !this.options.active)
             return;
         if (onCondition)
             this.on('condition', onCondition);

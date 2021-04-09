@@ -96,8 +96,8 @@ export class Spawnmon {
     if (this.options.unformatted)
       return output;
 
-    const cmd = command && this.getCommand(command);
-    let prefix = (cmd && this.formatPrefix(cmd.command, cmd.options.color)) || '';
+    const cmd = command && this.get(command);
+    let prefix = (cmd && this.getPrefix(cmd.command, cmd.options.color)) || '';
     const condensed = cmd && cmd.options.condensed;
 
     // grabbed from concurrently well played fellas!!!
@@ -191,42 +191,187 @@ export class Spawnmon {
    * 
    * @param command the command name, alias or an instance of Command.
    */
-  getCommand(command: string | Command): Command {
-    if (command instanceof Command) // nothing to do.
+  get(command: string | Command): Command {
+    if (command instanceof Command)
       return command;
-    return this.commands.get(command);
+    return [...this.commands.values()] // lookup by name or an alias.
+      .find(cmd => cmd.name === command);
   }
 
   /**
-   * Sets commands for a group.
+   * Checks if a the Spawnmon instance knows of the command.
    * 
-   * @param name the name of the group to set or update.
+   * @param command the command name or Command instance.
+   */
+  has(command: string | Command) {
+    const cmd = this.get(command);
+    return this.commands.has((cmd && cmd.command) || undefined);
+  }
+
+  /**
+   * Ensures that a command exists in the Spawnmon command instance.
+   * 
+   * @param command the command to ensure.
+   */
+  ensure(command: string | Command, as?: string) {
+    const cmd = this.get(command);
+    if (!cmd)
+      throw createError(`Failed to ensure unknown command.`);
+    cmd.options.as = as || cmd.command;
+    if (!this.has(cmd))
+      this.commands.set(cmd.command, cmd);
+    return this;
+  }
+
+  /**
+  * Assigns command(s) to a group.
+  * 
+  * @param group the name of the group to set or update.
+  * @param command the command name to set or merge witht the group.
+  * @param merge when true commands are merged with current.
+  */
+  assign(group: string, commands: string, merge?: boolean): this;
+
+  /**
+  * Assigns command(s) to a group.
+  * 
+  * @param group the name of the group to set or update.
+  * @param command the command to set or merge witht the group.
+  * @param merge when true commands are merged with current.
+  */
+  assign(group: string, commands: Command, merge?: boolean): this;
+
+  /**
+   * Assigns command(s) to a group.
+   * 
+   * @param group the name of the group to set or update.
    * @param commands the command names to set or merge witht the group.
    * @param merge when true commands are merged with current.
    */
-  updateGroup(name: string, commands: string | string[], merge = false) {
-    if (typeof commands === 'string')
+  assign(group: string, commands: string[], merge?: boolean): this;
+
+  /**
+   * Assigns command(s) to a group.
+   * 
+   * @param group the name of the group to set or update.
+   * @param commands the commands to set or merge witht the group.
+   * @param merge when true commands are merged with current.
+   */
+  assign(group: string, commands: Command[], merge?: boolean): this;
+
+  assign(group: string, commands: string | Command | (string | Command)[], merge = false) {
+
+    if (typeof commands === 'string' || commands instanceof Command)
       commands = [commands];
+
+    commands = commands.map(cmd => this.get(cmd).name);
+
     if (merge)
-      commands = [...(this.groups.get(name) || []), ...commands];
-    this.groups.set(name, [...commands]);
+      commands = [...(this.groups.get(group) || []), ...commands];
+
+    this.groups.set(group, [...commands as string[]]);
+
+    return this;
+
   }
 
   /**
-   * Removes command names from group.
+   * Removes command from default group.
    * 
-   * @param name the group name to be filtered.
    * @param commands the commands to be filtered/removed.
    */
-  filterGroup(name: string | string[], commands?: string[]) {
-    if (Array.isArray(name)) {
-      commands = name;
-      name = undefined;
+  unassign(command: string): this;
+
+  /**
+   * Removes command from default group.
+   * 
+   * @param command the commands to be filtered/removed.
+   */
+  unassign(commands: Command): this;
+
+  /**
+   * Removes command names from default group.
+   * 
+   * @param commands the commands to be filtered/removed.
+   */
+  unassign(commands: string[]): this;
+
+  /**
+   * Removes commands from default group.
+   * 
+   * @param commands the commands to be filtered/removed.
+   */
+  unassign(commands: Command[]): this;
+
+  /**
+   * Removes command from group by group name.
+   * 
+   * @param group the group name to be filtered.
+   * @param commands the command to be filtered/removed.
+   */
+  unassign(group: string, commands: string): this;
+
+  /**
+  * Removes command from group by group name.
+  * 
+  * @param group the group name to be filtered.
+  * @param commands the command to be filtered/removed.
+  */
+  unassign(group: string, commands: Command): this;
+
+  /**
+   * Removes commands from group by group name.
+   * 
+   * @param group the group name to be filtered.
+   * @param commands the commands to be filtered/removed.
+   */
+  unassign(group: string, commands: string[]): this;
+
+  /**
+   * Removes commands from group by group name.
+   * 
+   * @param group the group name to be filtered.
+   * @param commands the commands to be filtered/removed.
+   */
+  unassign(group: string, commands: Command[]): this;
+
+  unassign(
+    groupOrCommand: string | Command | (string | Command)[],
+    commands?: string | Command | (string | Command)[]) {
+
+    let groupName = DEFAULT_GROUP_NAME;
+
+    // First arg is a group name.
+    if (typeof groupOrCommand === 'string' && this.groups.get(groupOrCommand)) {
+      groupName = groupOrCommand;
     }
-    name = name || DEFAULT_GROUP_NAME;
-    const group = this.groups.get(name as string) || [];
-    commands = group.filter(v => !commands.includes(v));
-    this.updateGroup(name as string, commands);
+    else {
+      commands = groupOrCommand;
+      groupOrCommand = undefined;
+    }
+
+    // ensure the command is of type Array.
+    if (typeof commands !== 'undefined' && !Array.isArray(commands))
+      commands = [commands];
+
+    let grp = this.groups.get(groupName || DEFAULT_GROUP_NAME);
+
+    // At this point we need to have a group
+    if (!grp)
+      throw createError(`Assign failed, group name ${groupOrCommand} is unknown.`);
+
+
+
+
+    // Ensure commands are string.
+    let cmds = commands.map(cmd => this.get(cmd).name);
+
+    cmds = grp.filter(k => !cmds.includes(k));
+
+    this.assign(groupOrCommand as string, cmds);
+
+    return this;
+
   }
 
   /**
@@ -250,15 +395,15 @@ export class Spawnmon {
   }
 
   /**
-   * Formats the prefix for logging to output stream.
+   * Gets and formats the prefix for logging to output stream.
    * 
    * @param command the command to get and format prefix for.
    * @param color the color of the prefix if any.
    */
-  formatPrefix(command: string | Command, color: Color = this.options.prefixDefaultColor) {
+  getPrefix(command: string | Command, color: Color = this.options.prefixDefaultColor) {
 
     let prefix = '';
-    const cmd = this.getCommand(command);
+    const cmd = this.get(command);
 
     // prefix disabled or command is not auto runnable, return empty string.
     if (!this.options.prefix)
@@ -289,89 +434,144 @@ export class Spawnmon {
   }
 
   /**
-   * Adds a new command to the queue by options object.
+   * Adds a new command to the instance by options object.
    * 
    * @param options the command configuration obtions.
    */
-  add(options: ICommandOptions): Command;
+  create(options: ICommandOptions): Command;
 
   /**
-   * Adds existing Command to Spawnmon instance..
+   * Adds existing Command to Spawnmon instance using an alias.
    * 
    * @param command a command instance.
    * @param as an optional alias for the command.
    */
-  add(command: Command, as?: string): Command;
+  create(command: Command, as?: string): Command;
 
   /**
-  * Adds a new command to the queue.
-  * 
-  * @param command the command to be executed.
-  * @param args the arguments to be pased.
-  * @param as an alias name for the command.
-  */
-  add(command: string, args?: string | string[], as?: string): Command;
+    * Creats a new command to instance without adding to group.
+    * 
+    * @param command the command to be executed.
+    * @param args the arguments to be pased.
+    * @param as an alias name for the command.
+    */
+  create(command: string, args?: string | string[], as?: string): Command;
 
   /**
-   * Adds a new command to the queue.
+   * Creats a new command without adding to group.
    * 
    * @param command the command to be executed.
    * @param args the arguments to be pased.
    * @param options additional command options.
    * @param as an alias name for the command.
    */
-  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+  create(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
 
-  add(
-    nameOrOptions: string | ICommandOptions | Command,
+  create(
+    nameCmdOrOpts: string | ICommandOptions | Command,
     commandArgs?: string | string[],
-    initOptions?: Omit<ICommandOptions, 'command' | 'args'> | string,
+    initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
     as?: string) {
 
-    if (nameOrOptions instanceof Command) {
-
-      const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameOrOptions.command;
-
-      this.commands.set(aliasOrName, nameOrOptions);
-
-      // add to default group.
-      nameOrOptions.group(DEFAULT_GROUP_NAME);
-
-      return nameOrOptions;
-
+    if (nameCmdOrOpts instanceof Command) {
+      const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameCmdOrOpts.command;
+      nameCmdOrOpts.options.as = aliasOrName;
+      this.commands.set(nameCmdOrOpts.name, nameCmdOrOpts);
+      return nameCmdOrOpts;
     }
 
-    if (typeof initOptions === 'string') {
-      as = initOptions;
-      initOptions = undefined;
+    if (typeof initOptsOrAs === 'string') {
+      as = initOptsOrAs;
+      initOptsOrAs = undefined;
     }
 
     if (typeof commandArgs === 'object' && !Array.isArray(commandArgs) && commandArgs !== null) {
-      initOptions = commandArgs;
+      initOptsOrAs = commandArgs;
       commandArgs = undefined;
     }
 
-    let options = nameOrOptions as ICommandOptions;
+    let options = nameCmdOrOpts as ICommandOptions;
 
     // ensure an array.
     if (typeof commandArgs === 'string')
       commandArgs = [commandArgs];
 
     options = {
-      command: nameOrOptions as string,
+      command: nameCmdOrOpts as string,
       args: commandArgs as string[],
-      ...initOptions as ICommandOptions
+      ...initOptsOrAs as ICommandOptions
     };
 
-    const cmd = new Command(options, this);
-
+    const cmd = new Command({ as, ...options }, this);
     const aliasOrName = as || cmd.command;
+    cmd.options.as = aliasOrName;
 
-    this.commands.set(aliasOrName as string, cmd);
-
-    cmd.group(DEFAULT_GROUP_NAME);
+    this.commands.set(cmd.name, cmd);
 
     return cmd;
+
+  }
+
+  /**
+   * Creates a new command and adds to the default group.
+   * 
+   * @param options the command configuration obtions.
+   */
+  add(options: ICommandOptions): this;
+
+  /**
+   * Adds existing Command to Spawnmon instance and adds to the default group.
+   * 
+   * @param command a command instance.
+   * @param as an optional alias for the command.
+   */
+  add(command: Command, as?: string): this;
+
+  /**
+  * Creates a new command to the instance and adds to the default group.
+  * 
+  * @param command the command to be executed.
+  * @param args the arguments to be pased.
+  * @param as an alias name for the command.
+  */
+  add(command: string, args?: string | string[], as?: string): this;
+
+  /**
+   * Creates a new command adds to instance and default group.
+   * 
+   * @param command the command to be executed.
+   * @param args the arguments to be pased.
+   * @param options additional command options.
+   * @param as an alias name for the command.
+   */
+  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): this;
+
+  add(
+    nameCmdOrOpts: string | ICommandOptions | Command,
+    commandArgs?: string | string[],
+    initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
+    as?: string) {
+
+    const cmd = this.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
+
+    if (this.has(cmd.name))
+      throw createError(`Duplicate command ${cmd.name} detected.`);
+
+    // Add to default create.
+    cmd.assign(DEFAULT_GROUP_NAME);
+
+    return this;
+
+  }
+
+  /**
+   * Removes a command from the instance. Not likely to be
+   * used but for good measure it's here, also removes from 
+   * any assigned groups.
+   * 
+   * @param command the command to be removed.
+   */
+  remove(command: string | Command) {
 
   }
 

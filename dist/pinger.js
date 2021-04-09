@@ -4,6 +4,7 @@ exports.Pinger = void 0;
 const net_1 = require("net");
 const events_1 = require("events");
 const PINGER_DEFAULTS = {
+    active: true,
     host: '127.0.0.1',
     port: 3000,
     attempts: 10,
@@ -58,7 +59,15 @@ class Pinger extends events_1.EventEmitter {
     get port() {
         return this.options.port;
     }
+    activate() {
+        this.options.active = true;
+    }
+    inactivate() {
+        this.options.active = false;
+    }
     start(onConnected) {
+        if (!this.activate)
+            return this;
         if (this.socket)
             return this;
         if (onConnected)
