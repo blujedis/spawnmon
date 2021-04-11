@@ -36,8 +36,18 @@ export class Command {
 
   constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command) {
 
-    const { prefixDefaultColor, condensed } = spawnmon.options;
-    options = { ...COMMAND_DEFAULTS, color: prefixDefaultColor, condensed, timer: {}, pinger: {}, ...options };
+    const { defaultColor, condensed } = spawnmon.options;
+    options = {
+      ...COMMAND_DEFAULTS,
+      color: defaultColor,
+      condensed,
+      timer: {},
+      pinger: {},
+      ...options
+    };
+
+    if (/^win/.test(process.platform))
+      options.detached = false;
 
     const { pinger, timer } = options;
 
@@ -204,16 +214,6 @@ export class Command {
   }
 
   /**
-   * Gets the line prefix if enabled.
-   */
-  getPrefix(unpadded = false) {
-    const prefix = this.spawnmon.getPrefix(this.name, this.options.color);
-    if (unpadded)
-      return prefix;
-    return prefix + ' ';
-  }
-
-  /**
    * Sets the options object.
    * 
    * @param options options object to update or set to.
@@ -247,11 +247,11 @@ export class Command {
     return this;
   }
 
-  onPinged(nameOrCommand: string | Command) {
+  onPinged(command: string | Command) {
 
   }
 
-  onIdle(nameOrCommand: string | Command) {
+  onIdle(command: string | Command) {
 
   }
 
@@ -322,15 +322,11 @@ export class Command {
     if (!this.spawnmonChild)
       this.spawnmonChild = new Spawnmon({ ...this.spawnmon.options });
 
-    const cmd = this.spawnmon.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
+    const cmd = this.spawnmonChild.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
 
-
-    if (cmd) {
-      // update with this command as its parent.
+    // update with this command as its parent.
+    if (cmd)
       cmd.parent = this;
-      // this.spawnmonChild.assign()
-
-    }
 
     return this;
 

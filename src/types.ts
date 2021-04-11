@@ -28,23 +28,22 @@ export interface ICommandOptions extends SpawnOptions {
   condensed?: boolean;
   delay?: number;
   pinger?: IPingerOptions | PingerHandler;
-  timer?:  ISimpleTimerOptions | SimpleTimerHandler;
-
+  timer?: ISimpleTimerOptions | SimpleTimerHandler;
 }
 
 export interface ISpawnmonOptions extends ProcessEnvOptions {
   writestream?: NodeJS.WritableStream;
   transform?: TransformHandler;
-  prefix?: 'index' | 'command'; // when present use index of command or command name.
-  prefixMax?: number;           // max length of prefix before truncating.
-  prefixDefaultColor?: Color;
-  prefixTemplate?: string;      // a string template to build prefix from.
+  prefix?: string;                // index, pid, command, timestamp
+  prefixMax?: number;             // max length of prefix before truncating.
   prefixAlign?: 'left' | 'right' | 'center';
-  prefixFill?: string;          // the repeat fill when matching prefix width.
-  condensed?: boolean;          // when true console output strips empty lines.
-  handleSignals?: boolean;      // when true handles SIGINT, SIGTERM, SIGHUP signals...
-  unformatted?: boolean; // when true logging is output without formatting.
-  maxProcesses?: number;  // the max number of spawned child processes. 
+  prefixFill?: string;            // the repeat fill when matching prefix width.
+  defaultColor?: Color;           // default color used for prefix etc.
+  condensed?: boolean;            // when true console output strips empty lines.
+  handleSignals?: boolean;        // when true handles SIGINT, SIGTERM, SIGHUP signals...
+  raw?: boolean;                  // when true logging is output without formatting.
+  maxProcesses?: number;          // the max number of spawned child processes. 
+  onTimestamp?: () => string;     // user defined func to get timestamps. 
 }
 
 // PINGER
@@ -97,5 +96,5 @@ export interface ISimpleTimerCounters {
 // MISC
 //----------------------------------------
 
-export type Color = keyof StylesType<StyleFunction>;
+export type Color = string; // keyof StylesType<StyleFunction>;
 

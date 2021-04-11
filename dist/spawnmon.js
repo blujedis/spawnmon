@@ -1,43 +1,48 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Spawnmon = exports.DEFAULT_GROUP_NAME = void 0;
+const supports_color_1 = __importDefault(require("supports-color"));
 const command_1 = require("./command");
 const utils_1 = require("./utils");
-// Sorce color.
-process.env.FORCE_COLOR = '1';
+const colorSupport = supports_color_1.default.stdout;
+// prefix key names.
 const SPAWNMON_DEFAULTS = {
+    cwd: process.cwd(),
     writestream: process.stdout,
     transform: (line) => line.toString(),
-    prefix: 'index',
+    prefix: '[{index}]',
     prefixMax: 10,
-    prefixDefaultColor: 'dim',
-    prefixTemplate: '[{{prefix}}]',
+    defaultColor: 'dim',
+    // prefixTemplate: '[{prefix}]',
     prefixAlign: 'left',
     prefixFill: '.',
     condensed: false,
-    handleSignals: true
+    handleSignals: true,
+    onTimestamp: utils_1.simpleTimestamp
 };
 exports.DEFAULT_GROUP_NAME = 'default';
 class Spawnmon {
     constructor(options) {
-        this.running = false;
         this.indexes = [];
         this.maxPrefix = 0; // updated before run.
         this.commands = new Map();
         this.groups = new Map();
-        this.options = { ...SPAWNMON_DEFAULTS, ...options };
-        if (this.options.handleSignals)
+        options = {
+            ...SPAWNMON_DEFAULTS,
+            ...options
+        };
+        if (colorSupport)
+            options.env = {
+                ...options.env,
+                FORCE_COLOR: colorSupport.level + ''
+            };
+        if (options.handleSignals)
             this.handleSignals();
         this.groups.set(exports.DEFAULT_GROUP_NAME, []);
-    }
-    /**
-     * Sets the maximum allowable prefix length based on command names.
-     *
-     * @param commands list of command names.
-     */
-    setMaxPrefix(commands) {
-        const max = Math.max(0, ...commands.map(v => v.length));
-        this.maxPrefix = max > this.options.prefixMax ? this.options.prefixMax : max;
+        this.options = options;
     }
     /**
      * Ensures data is as string and that we don't have unnecessary line returns.
@@ -80,10 +85,10 @@ class Spawnmon {
      */
     formatLines(output, command) {
         // Don't format output.
-        if (this.options.unformatted)
+        if (this.options.raw)
             return output;
         const cmd = command && this.get(command);
-        let prefix = (cmd && this.getPrefix(cmd.command, cmd.options.color)) || '';
+        let prefix = (cmd && this.getPrefix(cmd.name, cmd.options.color)) || '';
         const condensed = cmd && cmd.options.condensed;
         // grabbed from concurrently well played fellas!!!
         // what's funny is when I looked at their source
@@ -113,6 +118,104 @@ class Spawnmon {
         return output;
     }
     /**
+     * Gets the index of a command.
+     *
+     * @param command the command name, alias or instance to get an index for.
+     * @param group the group to get the index of if none assumes the default.
+     */
+    getIndex(command, group = exports.DEFAULT_GROUP_NAME) {
+        if (command instanceof command_1.Command)
+            command = command.name;
+        const indexes = this.groups.get(group);
+        if (!indexes)
+            throw utils_1.createError(`Group ${group} could NOT be found.`);
+        return indexes.indexOf(command);
+    }
+    /**
+     * Gets the prefix key and value.
+     *
+     * @param command the command to get prefix for.
+     * @param group the group the prefix belongs to if not default.
+     */
+    getPrefixConfig(command, label, group = exports.DEFAULT_GROUP_NAME) {
+        if (!this.options.prefix)
+            return null;
+        const cmd = this.get(command);
+        const prefixMap = {
+            index: this.getIndex(command, group),
+            command: cmd.name,
+            pid: cmd.process.pid,
+            timestamp: this.options.onTimestamp(),
+            label
+        };
+        const template = this.options.prefix;
+        const key = template.match(/[index|command|pid|timestamp]/g).join('');
+        const val = prefixMap[key];
+        if (!key)
+            throw utils_1.createError(`Failed to lookup prefix value for ${key}.`);
+        return {
+            template,
+            key,
+            val
+        };
+    }
+    /**
+     * Gets and formats the prefix for logging to output stream.
+     *
+     * @param command the command to get and format prefix for.
+     * @param color the color of the prefix if any.
+     */
+    getPrefix(command, color = this.options.defaultColor, group = exports.DEFAULT_GROUP_NAME) {
+        let prefix = '';
+        const cmd = this.get(command);
+        const config = this.getPrefixConfig(command, group);
+        // prefix disabled or command is not auto runnable, return empty string.
+        if (!config)
+            return prefix;
+        const template = this.options.prefix; // this.options.prefixTemplate;
+        const templateLen = template.replace('{prefix}', '').length;
+        const adjMax = this.maxPrefix - templateLen;
+        prefix = this.options.prefix === 'command' ? cmd.name : this.getIndex(cmd) + '';
+        // Only truncate if command is used not index, no point.
+        if (this.maxPrefix && adjMax > 0 && this.options.prefix === 'command') {
+            prefix = prefix.length > adjMax && adjMax > 0
+                ? utils_1.truncate(prefix, adjMax, '')
+                : prefix;
+            const offset = prefix.length > adjMax ? 0 : adjMax - prefix.length;
+            prefix = this.padPrefix(prefix, offset);
+        }
+        prefix = template.replace('{prefix}', prefix);
+        if (color)
+            prefix = utils_1.colorize(prefix, color);
+        return prefix;
+    }
+    /**
+     * Iterates commands and builds values for determining the max
+     * allowed prefix length. So the longest value basically.
+     *
+     * @param commands command names or instances.
+     */
+    getMaxPrefixValues(...commands) {
+        const cmds = commands.map(cmd => this.get(cmd));
+    }
+    /**
+     * Sets the maximum allowable prefix length based on command names.
+     *
+     * @param values list of command names.
+     */
+    setMaxPrefix(values) {
+        // Normalize string values predefined by user
+        // with array of commands about to run. If 
+        // Command instances iterate and call values helper
+        // method above so we can determine the max length.
+        const vals = values.map(v => {
+            if (typeof v === 'string')
+                return v;
+        });
+        // const max = Math.max(0, ...values.map(v => v.length));
+        // this.maxPrefix = max > this.options.prefixMax ? this.options.prefixMax : max;
+    }
+    /**
      * Gets process id's of commands.
      */
     get pids() {
@@ -131,15 +234,23 @@ class Spawnmon {
             this.kill();
     }
     /**
-     * Essentially a lookup and normalizer in one to find your command.
+     * A lookup and normalizer to find command.
+     * For most actions involving finding a command
+     * this method should be called as it simplifies the find.
      *
      * @param command the command name, alias or an instance of Command.
+     * @param strict when false will get based on alias or command name.
      */
-    get(command) {
+    get(command, strict = false) {
         if (command instanceof command_1.Command)
             return command;
-        return [...this.commands.values()] // lookup by name or an alias.
-            .find(cmd => cmd.name === command);
+        const cmds = [...this.commands.values()];
+        const predicate = (cmd) => {
+            if (!strict)
+                return cmd.name === command || cmd.command === command;
+            return cmd.name === command;
+        };
+        return cmds.find(predicate);
     }
     /**
      * Checks if a the Spawnmon instance knows of the command.
@@ -147,8 +258,8 @@ class Spawnmon {
      * @param command the command name or Command instance.
      */
     has(command) {
-        const cmd = this.get(command);
-        return this.commands.has((cmd && cmd.command) || undefined);
+        const cmd = this.get(command, false); // strict checks only as in command map
+        return this.commands.has((cmd && cmd.name) || undefined);
     }
     /**
      * Ensures that a command exists in the Spawnmon command instance.
@@ -159,9 +270,9 @@ class Spawnmon {
         const cmd = this.get(command);
         if (!cmd)
             throw utils_1.createError(`Failed to ensure unknown command.`);
-        cmd.options.as = as || cmd.command;
+        cmd.options.as = as || cmd.name;
         if (!this.has(cmd))
-            this.commands.set(cmd.command, cmd);
+            this.commands.set(cmd.name, cmd);
         return this;
     }
     assign(group, commands, merge = false) {
@@ -196,54 +307,10 @@ class Spawnmon {
         this.assign(groupOrCommand, cmds);
         return this;
     }
-    /**
-     * Gets the index of a command.
-     *
-     * @param command the command name, alias or instance to get an index for.
-     * @param group the group to get the index of if none assumes the default.
-     */
-    getIndex(command, group = exports.DEFAULT_GROUP_NAME) {
-        if (command instanceof command_1.Command)
-            command = command.command;
-        const indexes = this.groups.get(group);
-        if (!indexes)
-            throw utils_1.createError(`Group ${group} could NOT be found.`);
-        return indexes.indexOf(command);
-    }
-    /**
-     * Gets and formats the prefix for logging to output stream.
-     *
-     * @param command the command to get and format prefix for.
-     * @param color the color of the prefix if any.
-     */
-    getPrefix(command, color = this.options.prefixDefaultColor) {
-        let prefix = '';
-        const cmd = this.get(command);
-        // prefix disabled or command is not auto runnable, return empty string.
-        if (!this.options.prefix)
-            return prefix;
-        const template = this.options.prefixTemplate;
-        const templateLen = template.replace('{{prefix}}', '').length;
-        const adjMax = this.maxPrefix - templateLen;
-        prefix = this.options.prefix === 'command' ? cmd.command : this.getIndex(cmd) + '';
-        // Only truncate if command is used not index, no point.
-        if (this.maxPrefix && adjMax > 0 && this.options.prefix === 'command') {
-            prefix = prefix.length > adjMax && adjMax > 0
-                ? utils_1.truncate(prefix, adjMax, '')
-                : prefix;
-            const offset = prefix.length > adjMax ? 0 : adjMax - prefix.length;
-            prefix = this.padPrefix(prefix, offset);
-        }
-        prefix = template.replace('{{prefix}}', prefix);
-        if (color)
-            prefix = utils_1.colorize(prefix, color);
-        return prefix;
-    }
-    create(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
+    init(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
         if (nameCmdOrOpts instanceof command_1.Command) {
             const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameCmdOrOpts.command;
             nameCmdOrOpts.options.as = aliasOrName;
-            this.commands.set(nameCmdOrOpts.name, nameCmdOrOpts);
             return nameCmdOrOpts;
         }
         if (typeof initOptsOrAs === 'string') {
@@ -266,16 +333,24 @@ class Spawnmon {
         const cmd = new command_1.Command({ as, ...options }, this);
         const aliasOrName = as || cmd.command;
         cmd.options.as = aliasOrName;
-        this.commands.set(cmd.name, cmd);
+        return cmd;
+    }
+    create(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
+        const cmd = this.init(nameCmdOrOpts, commandArgs, initOptsOrAs, as);
+        if (!cmd) {
+            let cmdName = nameCmdOrOpts;
+            if (!(nameCmdOrOpts instanceof command_1.Command) && typeof nameCmdOrOpts === 'object' && nameCmdOrOpts !== null)
+                cmdName = nameCmdOrOpts.as || nameCmdOrOpts.command;
+            throw utils_1.createError(`Command ${cmdName || 'anonymous'} failed creation, verify options and try again.`);
+        }
+        this.ensure(cmd);
         return cmd;
     }
     add(nameCmdOrOpts, commandArgs, initOptsOrAs, as) {
         const cmd = this.create(nameCmdOrOpts, commandArgs, initOptsOrAs, as);
-        if (this.has(cmd.name))
-            throw utils_1.createError(`Duplicate command ${cmd.name} detected.`);
         // Add to default create.
         cmd.assign(exports.DEFAULT_GROUP_NAME);
-        return this;
+        return cmd;
     }
     /**
      * Removes a command from the instance. Not likely to be
@@ -285,29 +360,37 @@ class Spawnmon {
      * @param command the command to be removed.
      */
     remove(command) {
+        const cmd = this.get(command);
+        if (!this.has(cmd))
+            return false;
+        [...this.groups.keys()].forEach(k => {
+            const group = this.groups.get(k);
+            this.groups.set(k, group.filter(n => n !== cmd.name));
+        });
+        return this.commands.delete(cmd.name);
     }
     run(group, ...commands) {
-        if (!this.groups.has(group))
+        // If first arg is not a group assume command.
+        if (group instanceof command_1.Command || !this.groups.has(group)) {
             commands.unshift(group);
-        const normalizedCommands = !commands.length ? this.groups.get(exports.DEFAULT_GROUP_NAME) : commands;
-        commands = this.groups.has(group) ? this.groups.get(group) : normalizedCommands;
-        this.setMaxPrefix(commands);
-        commands.forEach(key => {
-            const command = this.commands.get(key);
-            setTimeout(() => {
-                command.run();
-            }, 100);
-        });
-        this.running = true;
+            group = undefined;
+        }
+        // Default commands or user provided.
+        const defaultGroup = this.groups.get(group || exports.DEFAULT_GROUP_NAME);
+        // If a group is provided use the group's commands.
+        commands = (group && this.groups.has(group) ? this.groups.get(group) : commands);
+        // If no commands at this point use default group.
+        if (!commands.length)
+            commands = defaultGroup;
+        const cmds = commands.map(cmd => this.get(cmd));
+        this.setMaxPrefix(cmds);
+        // Run each command.
+        cmds.forEach(cmd => cmd.run());
+        this.running = cmds;
     }
-    kill(...names) {
-        if (!names.length)
-            names = [...this.commands.keys()];
-        this.running = false;
-        names.forEach(k => {
-            const command = this.commands.get(k);
-            command.kill();
-        });
+    kill(...commands) {
+        const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.running];
+        cmds.forEach(cmd => cmd.kill());
     }
     /**
      * Handles node signals, useful for cleanup.
@@ -318,7 +401,7 @@ class Spawnmon {
             process.on(signal, () => {
                 const lines = [];
                 [...this.commands.values()].forEach(cmd => {
-                    lines.push(utils_1.colorize(`${cmd.command} recived signal ${signal}.`, 'dim'));
+                    lines.push(utils_1.colorize(`${cmd.name} recived signal ${signal}.`, 'dim'));
                     cmd.unsubscribe();
                 });
                 // could write to stdin or line by line but

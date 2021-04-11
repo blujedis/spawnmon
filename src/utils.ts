@@ -117,3 +117,20 @@ export function createError(err: string | (Error & Record<string, any>)) {
   err.message = colorize(err.message, 'red');
   return err;
 }
+
+/**
+ * Timestamp only supports long format e.g. 'YYYY.MM.DD HH:mm:ss'
+ * If you need more advanced formatting pass in "onTimestamp"
+ * handler in Spawnmon options.
+ * 
+ * @param format the format to be used.
+ * @param date the date to create timestamp for.
+ */
+export function simpleTimestamp(date = new Date()) {
+  return date
+    .toISOString()
+    .split('.')[0]              // remove offset too long.
+    .split('T')                 // split date and time.
+    .join(' ')                  // join using empty space.
+    .replace(/-/g, '.');        // change - to . it's shorter.
+}

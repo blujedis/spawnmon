@@ -3,7 +3,7 @@ import { ISpawnmonOptions, ICommandOptions, Color } from './types';
 export declare const DEFAULT_GROUP_NAME = "default";
 export declare class Spawnmon {
     private prevChar;
-    running: boolean;
+    running: Command[];
     indexes: string[];
     maxPrefix: number;
     commands: Map<string, Command>;
@@ -11,17 +11,11 @@ export declare class Spawnmon {
     options: ISpawnmonOptions;
     constructor(options?: ISpawnmonOptions);
     /**
-     * Sets the maximum allowable prefix length based on command names.
-     *
-     * @param commands list of command names.
-     */
-    private setMaxPrefix;
-    /**
      * Ensures data is as string and that we don't have unnecessary line returns.
      *
      * @param data the data to be output.
      */
-    private prepareOutput;
+    protected prepareOutput(data: any): string;
     /**
      * Pads the prefix for display in console.
      *
@@ -29,7 +23,7 @@ export declare class Spawnmon {
      * @param offset the offset in spaces.
      * @param align the alignment for the padding.
      */
-    private padPrefix;
+    protected padPrefix(prefix: string, offset: number, align?: 'left' | 'right' | 'center'): string;
     /**
      * Formats string for log output.
      *
@@ -37,7 +31,45 @@ export declare class Spawnmon {
      * @param prefix optional prefix for each line.
      * @param condensed indicates output should be condensed removing spaces.
      */
-    private formatLines;
+    protected formatLines(output: string, command?: string | Command): string;
+    /**
+     * Gets the index of a command.
+     *
+     * @param command the command name, alias or instance to get an index for.
+     * @param group the group to get the index of if none assumes the default.
+     */
+    protected getIndex(command: string | Command, group?: string): number;
+    /**
+     * Gets the prefix key and value.
+     *
+     * @param command the command to get prefix for.
+     * @param group the group the prefix belongs to if not default.
+     */
+    protected getPrefixConfig(command: string | Command, label?: string, group?: string): {
+        template: string;
+        key: string;
+        val: any;
+    };
+    /**
+     * Gets and formats the prefix for logging to output stream.
+     *
+     * @param command the command to get and format prefix for.
+     * @param color the color of the prefix if any.
+     */
+    protected getPrefix(command: string | Command, color?: Color, group?: string): string;
+    /**
+     * Iterates commands and builds values for determining the max
+     * allowed prefix length. So the longest value basically.
+     *
+     * @param commands command names or instances.
+     */
+    protected getMaxPrefixValues(...commands: (string | Command)[]): void;
+    /**
+     * Sets the maximum allowable prefix length based on command names.
+     *
+     * @param values list of command names.
+     */
+    protected setMaxPrefix(values: (string | Command)[]): void;
     /**
      * Gets process id's of commands.
      */
@@ -58,11 +90,14 @@ export declare class Spawnmon {
      */
     log(data: string | Error, command: string | Command, shouldKill?: boolean): Promise<void>;
     /**
-     * Essentially a lookup and normalizer in one to find your command.
+     * A lookup and normalizer to find command.
+     * For most actions involving finding a command
+     * this method should be called as it simplifies the find.
      *
      * @param command the command name, alias or an instance of Command.
+     * @param strict when false will get based on alias or command name.
      */
-    get(command: string | Command): Command;
+    get(command: string | Command, strict?: boolean): Command;
     /**
      * Checks if a the Spawnmon instance knows of the command.
      *
@@ -160,62 +195,80 @@ export declare class Spawnmon {
      */
     unassign(group: string, commands: Command[]): this;
     /**
-     * Gets the index of a command.
-     *
-     * @param command the command name, alias or instance to get an index for.
-     * @param group the group to get the index of if none assumes the default.
-     */
-    getIndex(command: string | Command, group?: string): number;
-    /**
-     * Gets and formats the prefix for logging to output stream.
-     *
-     * @param command the command to get and format prefix for.
-     * @param color the color of the prefix if any.
-     */
-    getPrefix(command: string | Command, color?: Color): string;
-    /**
-     * Adds a new command to the instance by options object.
+     * Inits a new command by options object without adding to group or instance.
      *
      * @param options the command configuration obtions.
      */
-    create(options: ICommandOptions): Command;
+    init(options: ICommandOptions): Command;
     /**
-     * Adds existing Command to Spawnmon instance using an alias.
+     * Inits existing Command without adding to group or instance.
+     * This method a bit circular used as normalizer may set defaults
+     * or other options in the future.
      *
      * @param command a command instance.
      * @param as an optional alias for the command.
      */
-    create(command: Command, as?: string): Command;
+    init(command: Command, as?: string): Command;
     /**
-      * Creats a new command to instance without adding to group.
+      * Inits a new command by args without adding to group or commands.
       *
       * @param command the command to be executed.
       * @param args the arguments to be pased.
       * @param as an alias name for the command.
       */
-    create(command: string, args?: string | string[], as?: string): Command;
+    init(command: string, args?: string | string[], as?: string): Command;
     /**
-     * Creats a new command without adding to group.
+     * Inits a new command by args without adding to group or commands.
      *
      * @param command the command to be executed.
      * @param args the arguments to be pased.
      * @param options additional command options.
      * @param as an alias name for the command.
      */
+    init(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+    /**
+     * Creates a new command by options object without adding to group.
+     *
+     * @param options the command configuration obtions.
+     */
+    create(options: ICommandOptions): Command;
+    /**
+     * Creates a command by instance without adding to group.
+     *
+     * @param command a command instance.
+     * @param as an optional alias for the command.
+     */
+    create(command: Command, as?: string): Command;
+    /**
+     * Creats a new command by args without adding to group.
+     *
+     * @param command the command to be executed.
+     * @param args the arguments to be pased.
+     * @param as an alias name for the command.
+     */
+    create(command: string, args?: string | string[], as?: string): Command;
+    /**
+      * Creats a new command by args without adding to group.
+      *
+      * @param command the command to be executed.
+      * @param args the arguments to be pased.
+      * @param options additional command options.
+      * @param as an alias name for the command.
+      */
     create(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
     /**
      * Creates a new command and adds to the default group.
      *
      * @param options the command configuration obtions.
      */
-    add(options: ICommandOptions): this;
+    add(options: ICommandOptions): Command;
     /**
      * Adds existing Command to Spawnmon instance and adds to the default group.
      *
      * @param command a command instance.
      * @param as an optional alias for the command.
      */
-    add(command: Command, as?: string): this;
+    add(command: Command, as?: string): Command;
     /**
     * Creates a new command to the instance and adds to the default group.
     *
@@ -223,7 +276,7 @@ export declare class Spawnmon {
     * @param args the arguments to be pased.
     * @param as an alias name for the command.
     */
-    add(command: string, args?: string | string[], as?: string): this;
+    add(command: string, args?: string | string[], as?: string): Command;
     /**
      * Creates a new command adds to instance and default group.
      *
@@ -232,7 +285,7 @@ export declare class Spawnmon {
      * @param options additional command options.
      * @param as an alias name for the command.
      */
-    add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): this;
+    add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
     /**
      * Removes a command from the instance. Not likely to be
      * used but for good measure it's here, also removes from
@@ -240,7 +293,7 @@ export declare class Spawnmon {
      *
      * @param command the command to be removed.
      */
-    remove(command: string | Command): void;
+    remove(command: string | Command): boolean;
     /**
      * Runs all commands in default group.
      */
@@ -252,34 +305,42 @@ export declare class Spawnmon {
       */
     run(command: string): void;
     /**
+     * Runs a command by instance.
+     *
+     * @param command the command instance to run
+     */
+    run(command: Command): void;
+    /**
      * Runs commands by name.
      *
      * @param commands the names of the commands to be run.
      */
     run(...commands: string[]): void;
     /**
-      * Runs a command by name.
-      *
-      * @param group the group name to run.
-      * @param commands the name of the commands to run in group.
-      */
+     * Runs a commands by instance.
+     *
+     * @param command the command instances to run
+     */
+    run(...command: Command[]): void;
+    /**
+    * Runs commands by instance.
+    *
+    * @param group the group name to run.
+    * @param commands the name of the commands to run in group.
+    */
     run(group: string, ...commands: string[]): void;
     /**
-     * Kills all bound commands.
-     */
-    kill(): void;
+    * Kills running commands.
+    */
+    kill(): any;
     /**
-     * Kills a command by name.
-     *
-     * @param command the name of the command to kill
+     * Kills specified commands.
      */
-    kill(command: string): void;
+    kill(...commands: string[]): any;
     /**
-     * Kills commands by name.
-     *
-     * @param commands the names of the commands to be killed.
+     * Kills specified commands.
      */
-    kill(...commands: string[]): void;
+    kill(...commands: Command[]): any;
     /**
      * Handles node signals, useful for cleanup.
      */

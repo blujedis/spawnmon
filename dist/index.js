@@ -14,5 +14,6 @@ __exportStar(require("./types"), exports);
 __exportStar(require("./pinger"), exports);
 __exportStar(require("./timer"), exports);
 __exportStar(require("./command"), exports);
+__exportStar(require("./cli"), exports);
 __exportStar(require("./spawnmon"), exports);
 //# sourceMappingURL=index.js.map

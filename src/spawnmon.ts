@@ -1,21 +1,25 @@
+import supportsColor from 'supports-color';
 import { Command } from './command';
 import { ISpawnmonOptions, ICommandOptions, Color, } from './types';
-import { colorize, truncate, isBlankLine, createError } from './utils';
+import { colorize, truncate, isBlankLine, createError, simpleTimestamp } from './utils';
 
-// Sorce color.
-process.env.FORCE_COLOR = '1';
+const colorSupport = supportsColor.stdout;
+
+// prefix key names.
 
 const SPAWNMON_DEFAULTS: ISpawnmonOptions = {
+  cwd: process.cwd(),
   writestream: process.stdout,
   transform: (line) => line.toString(),
-  prefix: 'index',
+  prefix: '[{index}]', // index, command, pid, timestamp
   prefixMax: 10,
-  prefixDefaultColor: 'dim',
-  prefixTemplate: '[{{prefix}}]',
+  defaultColor: 'dim',
+  // prefixTemplate: '[{prefix}]',
   prefixAlign: 'left',
   prefixFill: '.',
   condensed: false,
-  handleSignals: true
+  handleSignals: true,
+  onTimestamp: simpleTimestamp
 };
 
 export const DEFAULT_GROUP_NAME = 'default';
@@ -24,7 +28,7 @@ export class Spawnmon {
 
   private prevChar;
 
-  running = false;
+  running: Command[]; // the running commands.
   indexes: string[] = [];
   maxPrefix = 0; // updated before run.
   commands = new Map<string, Command>();
@@ -33,20 +37,24 @@ export class Spawnmon {
   options: ISpawnmonOptions;
 
   constructor(options?: ISpawnmonOptions) {
-    this.options = { ...SPAWNMON_DEFAULTS, ...options };
-    if (this.options.handleSignals)
+
+    options = {
+      ...SPAWNMON_DEFAULTS,
+      ...options
+    };
+
+    if (colorSupport)
+      options.env = {
+        ...options.env,
+        FORCE_COLOR: colorSupport.level + ''
+      };
+
+    if (options.handleSignals)
       this.handleSignals();
     this.groups.set(DEFAULT_GROUP_NAME, []);
-  }
 
-  /**
-   * Sets the maximum allowable prefix length based on command names.
-   * 
-   * @param commands list of command names.
-   */
-  private setMaxPrefix(commands: string[]) {
-    const max = Math.max(0, ...commands.map(v => v.length));
-    this.maxPrefix = max > this.options.prefixMax ? this.options.prefixMax : max;
+    this.options = options;
+
   }
 
   /**
@@ -54,7 +62,7 @@ export class Spawnmon {
    * 
    * @param data the data to be output.
    */
-  private prepareOutput(data: any): string {
+  protected prepareOutput(data: any): string {
     data = data.toString();
     if (!/\n$/.test(data))
       data += '\n';
@@ -70,7 +78,7 @@ export class Spawnmon {
    * @param offset the offset in spaces.
    * @param align the alignment for the padding.
    */
-  private padPrefix(prefix: string, offset: number, align: 'left' | 'right' | 'center' = this.options.prefixAlign) {
+  protected padPrefix(prefix: string, offset: number, align: 'left' | 'right' | 'center' = this.options.prefixAlign) {
     if (offset <= 0)
       return prefix; // nothing to do.
     const fill = this.options.prefixFill;
@@ -90,14 +98,14 @@ export class Spawnmon {
    * @param prefix optional prefix for each line.
    * @param condensed indicates output should be condensed removing spaces.
    */
-  private formatLines(output: string, command?: string | Command) {
+  protected formatLines(output: string, command?: string | Command) {
 
     // Don't format output.
-    if (this.options.unformatted)
+    if (this.options.raw)
       return output;
 
     const cmd = command && this.get(command);
-    let prefix = (cmd && this.getPrefix(cmd.command, cmd.options.color)) || '';
+    let prefix = (cmd && this.getPrefix(cmd.name, cmd.options.color)) || '';
     const condensed = cmd && cmd.options.condensed;
 
     // grabbed from concurrently well played fellas!!!
@@ -140,6 +148,137 @@ export class Spawnmon {
 
     // need to tweak this a bit so we don't get random prefix with blank line.
     return output;
+
+  }
+
+  /**
+   * Gets the index of a command.
+   * 
+   * @param command the command name, alias or instance to get an index for.
+   * @param group the group to get the index of if none assumes the default.
+   */
+  protected getIndex(command: string | Command, group = DEFAULT_GROUP_NAME) {
+
+    if (command instanceof Command)
+      command = command.name;
+
+    const indexes = this.groups.get(group);
+
+    if (!indexes)
+      throw createError(`Group ${group} could NOT be found.`);
+
+    return indexes.indexOf(command);
+
+  }
+
+  /**
+   * Gets the prefix key and value.
+   * 
+   * @param command the command to get prefix for.
+   * @param group the group the prefix belongs to if not default.
+   */
+  protected getPrefixConfig(command: string | Command, label?: string, group = DEFAULT_GROUP_NAME) {
+
+    if (!this.options.prefix)
+      return null;
+
+    const cmd = this.get(command);
+
+    const prefixMap = {
+      index: this.getIndex(command, group),
+      command: cmd.name,
+      pid: cmd.process.pid,
+      timestamp: this.options.onTimestamp(),
+      label
+    };
+
+    const template = this.options.prefix;
+    const key = template.match(/[index|command|pid|timestamp]/g).join('');
+    const val = prefixMap[key];
+
+    if (!key)
+      throw createError(`Failed to lookup prefix value for ${key}.`);
+
+    return {
+      template,
+      key,
+      val
+    };
+
+  }
+
+  /**
+   * Gets and formats the prefix for logging to output stream.
+   * 
+   * @param command the command to get and format prefix for.
+   * @param color the color of the prefix if any.
+   */
+  protected getPrefix(command: string | Command, color: Color = this.options.defaultColor, group = DEFAULT_GROUP_NAME) {
+
+    let prefix = '';
+    const cmd = this.get(command);
+
+    const config = this.getPrefixConfig(command, group);
+    // prefix disabled or command is not auto runnable, return empty string.
+    if (!config)
+      return prefix;
+
+    const template = this.options.prefix; // this.options.prefixTemplate;
+    const templateLen = template.replace('{prefix}', '').length;
+    const adjMax = this.maxPrefix - templateLen;
+
+    prefix = this.options.prefix === 'command' ? cmd.name : this.getIndex(cmd) + '';
+
+    // Only truncate if command is used not index, no point.
+    if (this.maxPrefix && adjMax > 0 && this.options.prefix === 'command') {
+      prefix = prefix.length > adjMax && adjMax > 0
+        ? truncate(prefix, adjMax, '')
+        : prefix;
+      const offset = prefix.length > adjMax ? 0 : adjMax - prefix.length;
+      prefix = this.padPrefix(prefix, offset);
+    }
+
+
+    prefix = template.replace('{prefix}', prefix);
+
+    if (color)
+      prefix = colorize(prefix, color);
+
+    return prefix;
+
+  }
+
+  /**
+   * Iterates commands and builds values for determining the max
+   * allowed prefix length. So the longest value basically.
+   * 
+   * @param commands command names or instances.
+   */
+  protected getMaxPrefixValues(...commands: (string | Command)[]) {
+    const cmds = commands.map(cmd => this.get(cmd));
+
+  }
+
+  /**
+   * Sets the maximum allowable prefix length based on command names.
+   * 
+   * @param values list of command names.
+   */
+  protected setMaxPrefix(values: (string | Command)[]) {
+
+    // Normalize string values predefined by user
+    // with array of commands about to run. If 
+    // Command instances iterate and call values helper
+    // method above so we can determine the max length.
+    const vals = values.map(v => {
+      if (typeof v === 'string')
+        return v;
+
+    });
+
+    // const max = Math.max(0, ...values.map(v => v.length));
+
+    // this.maxPrefix = max > this.options.prefixMax ? this.options.prefixMax : max;
 
   }
 
@@ -187,15 +326,23 @@ export class Spawnmon {
   }
 
   /**
-   * Essentially a lookup and normalizer in one to find your command.
+   * A lookup and normalizer to find command.
+   * For most actions involving finding a command
+   * this method should be called as it simplifies the find.
    * 
    * @param command the command name, alias or an instance of Command.
+   * @param strict when false will get based on alias or command name.
    */
-  get(command: string | Command): Command {
+  get(command: string | Command, strict = false): Command {
     if (command instanceof Command)
       return command;
-    return [...this.commands.values()] // lookup by name or an alias.
-      .find(cmd => cmd.name === command);
+    const cmds = [...this.commands.values()];
+    const predicate = (cmd: Command) => {
+      if (!strict)
+        return cmd.name === command || cmd.command === command;
+      return cmd.name === command;
+    };
+    return cmds.find(predicate);
   }
 
   /**
@@ -204,8 +351,8 @@ export class Spawnmon {
    * @param command the command name or Command instance.
    */
   has(command: string | Command) {
-    const cmd = this.get(command);
-    return this.commands.has((cmd && cmd.command) || undefined);
+    const cmd = this.get(command, false); // strict checks only as in command map
+    return this.commands.has((cmd && cmd.name) || undefined);
   }
 
   /**
@@ -217,9 +364,9 @@ export class Spawnmon {
     const cmd = this.get(command);
     if (!cmd)
       throw createError(`Failed to ensure unknown command.`);
-    cmd.options.as = as || cmd.command;
+    cmd.options.as = as || cmd.name;
     if (!this.has(cmd))
-      this.commands.set(cmd.command, cmd);
+      this.commands.set(cmd.name, cmd);
     return this;
   }
 
@@ -375,99 +522,42 @@ export class Spawnmon {
   }
 
   /**
-   * Gets the index of a command.
-   * 
-   * @param command the command name, alias or instance to get an index for.
-   * @param group the group to get the index of if none assumes the default.
-   */
-  getIndex(command: string | Command, group = DEFAULT_GROUP_NAME) {
-
-    if (command instanceof Command)
-      command = command.command;
-
-    const indexes = this.groups.get(group);
-
-    if (!indexes)
-      throw createError(`Group ${group} could NOT be found.`);
-
-    return indexes.indexOf(command);
-
-  }
-
-  /**
-   * Gets and formats the prefix for logging to output stream.
-   * 
-   * @param command the command to get and format prefix for.
-   * @param color the color of the prefix if any.
-   */
-  getPrefix(command: string | Command, color: Color = this.options.prefixDefaultColor) {
-
-    let prefix = '';
-    const cmd = this.get(command);
-
-    // prefix disabled or command is not auto runnable, return empty string.
-    if (!this.options.prefix)
-      return prefix;
-
-    const template = this.options.prefixTemplate;
-    const templateLen = template.replace('{{prefix}}', '').length;
-    const adjMax = this.maxPrefix - templateLen;
-
-    prefix = this.options.prefix === 'command' ? cmd.command : this.getIndex(cmd) + '';
-
-    // Only truncate if command is used not index, no point.
-    if (this.maxPrefix && adjMax > 0 && this.options.prefix === 'command') {
-      prefix = prefix.length > adjMax && adjMax > 0
-        ? truncate(prefix, adjMax, '')
-        : prefix;
-      const offset = prefix.length > adjMax ? 0 : adjMax - prefix.length;
-      prefix = this.padPrefix(prefix, offset);
-    }
-
-    prefix = template.replace('{{prefix}}', prefix);
-
-    if (color)
-      prefix = colorize(prefix, color);
-
-    return prefix;
-
-  }
-
-  /**
-   * Adds a new command to the instance by options object.
+   * Inits a new command by options object without adding to group or instance.
    * 
    * @param options the command configuration obtions.
    */
-  create(options: ICommandOptions): Command;
+  init(options: ICommandOptions): Command;
 
   /**
-   * Adds existing Command to Spawnmon instance using an alias.
+   * Inits existing Command without adding to group or instance.
+   * This method a bit circular used as normalizer may set defaults
+   * or other options in the future.
    * 
    * @param command a command instance.
    * @param as an optional alias for the command.
    */
-  create(command: Command, as?: string): Command;
+  init(command: Command, as?: string): Command;
 
   /**
-    * Creats a new command to instance without adding to group.
+    * Inits a new command by args without adding to group or commands.
     * 
     * @param command the command to be executed.
     * @param args the arguments to be pased.
     * @param as an alias name for the command.
     */
-  create(command: string, args?: string | string[], as?: string): Command;
+  init(command: string, args?: string | string[], as?: string): Command;
 
   /**
-   * Creats a new command without adding to group.
+   * Inits a new command by args without adding to group or commands.
    * 
    * @param command the command to be executed.
    * @param args the arguments to be pased.
    * @param options additional command options.
    * @param as an alias name for the command.
    */
-  create(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+  init(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
 
-  create(
+  init(
     nameCmdOrOpts: string | ICommandOptions | Command,
     commandArgs?: string | string[],
     initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
@@ -476,7 +566,6 @@ export class Spawnmon {
     if (nameCmdOrOpts instanceof Command) {
       const aliasOrName = typeof commandArgs === 'string' ? commandArgs : nameCmdOrOpts.command;
       nameCmdOrOpts.options.as = aliasOrName;
-      this.commands.set(nameCmdOrOpts.name, nameCmdOrOpts);
       return nameCmdOrOpts;
     }
 
@@ -506,7 +595,60 @@ export class Spawnmon {
     const aliasOrName = as || cmd.command;
     cmd.options.as = aliasOrName;
 
-    this.commands.set(cmd.name, cmd);
+    return cmd;
+
+  }
+
+  /**
+   * Creates a new command by options object without adding to group.
+   * 
+   * @param options the command configuration obtions.
+   */
+  create(options: ICommandOptions): Command;
+
+  /**
+   * Creates a command by instance without adding to group.
+   * 
+   * @param command a command instance.
+   * @param as an optional alias for the command.
+   */
+  create(command: Command, as?: string): Command;
+
+  /**
+   * Creats a new command by args without adding to group.
+   * 
+   * @param command the command to be executed.
+   * @param args the arguments to be pased.
+   * @param as an alias name for the command.
+   */
+  create(command: string, args?: string | string[], as?: string): Command;
+
+  /**
+    * Creats a new command by args without adding to group.
+    * 
+    * @param command the command to be executed.
+    * @param args the arguments to be pased.
+    * @param options additional command options.
+    * @param as an alias name for the command.
+    */
+  create(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+
+  create(
+    nameCmdOrOpts: string | ICommandOptions | Command,
+    commandArgs?: string | string[],
+    initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
+    as?: string) {
+
+    const cmd = this.init(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
+
+    if (!cmd) {
+      let cmdName = nameCmdOrOpts as string;
+      if (!(nameCmdOrOpts instanceof Command) && typeof nameCmdOrOpts === 'object' && nameCmdOrOpts !== null)
+        cmdName = nameCmdOrOpts.as || nameCmdOrOpts.command;
+      throw createError(`Command ${cmdName || 'anonymous'} failed creation, verify options and try again.`);
+    }
+
+    this.ensure(cmd);
 
     return cmd;
 
@@ -517,7 +659,7 @@ export class Spawnmon {
    * 
    * @param options the command configuration obtions.
    */
-  add(options: ICommandOptions): this;
+  add(options: ICommandOptions): Command;
 
   /**
    * Adds existing Command to Spawnmon instance and adds to the default group.
@@ -525,7 +667,7 @@ export class Spawnmon {
    * @param command a command instance.
    * @param as an optional alias for the command.
    */
-  add(command: Command, as?: string): this;
+  add(command: Command, as?: string): Command;
 
   /**
   * Creates a new command to the instance and adds to the default group.
@@ -534,7 +676,7 @@ export class Spawnmon {
   * @param args the arguments to be pased.
   * @param as an alias name for the command.
   */
-  add(command: string, args?: string | string[], as?: string): this;
+  add(command: string, args?: string | string[], as?: string): Command;
 
   /**
    * Creates a new command adds to instance and default group.
@@ -544,7 +686,7 @@ export class Spawnmon {
    * @param options additional command options.
    * @param as an alias name for the command.
    */
-  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): this;
+  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
 
   add(
     nameCmdOrOpts: string | ICommandOptions | Command,
@@ -554,13 +696,10 @@ export class Spawnmon {
 
     const cmd = this.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
 
-    if (this.has(cmd.name))
-      throw createError(`Duplicate command ${cmd.name} detected.`);
-
     // Add to default create.
     cmd.assign(DEFAULT_GROUP_NAME);
 
-    return this;
+    return cmd;
 
   }
 
@@ -572,7 +711,14 @@ export class Spawnmon {
    * @param command the command to be removed.
    */
   remove(command: string | Command) {
-
+    const cmd = this.get(command);
+    if (!this.has(cmd))
+      return false;
+    [...this.groups.keys()].forEach(k => {
+      const group = this.groups.get(k);
+      this.groups.set(k, group.filter(n => n !== cmd.name));
+    });
+    return this.commands.delete(cmd.name);
   }
 
   /**
@@ -588,6 +734,13 @@ export class Spawnmon {
   run(command: string): void;
 
   /**
+   * Runs a command by instance.
+   * 
+   * @param command the command instance to run
+   */
+  run(command: Command): void;
+
+  /**
    * Runs commands by name.
    * 
    * @param commands the names of the commands to be run.
@@ -595,61 +748,67 @@ export class Spawnmon {
   run(...commands: string[]): void;
 
   /**
-    * Runs a command by name.
-    * 
-    * @param group the group name to run.
-    * @param commands the name of the commands to run in group.
-    */
+   * Runs a commands by instance.
+   * 
+   * @param command the command instances to run
+   */
+  run(...command: Command[]): void;
+
+  /**
+  * Runs commands by instance.
+  * 
+  * @param group the group name to run.
+  * @param commands the name of the commands to run in group.
+  */
   run(group: string, ...commands: string[]): void;
 
-  run(group?: string, ...commands: string[]) {
+  run(group?: string | Command, ...commands: (string | Command)[]) {
 
-    if (!this.groups.has(group))
+    // If first arg is not a group assume command.
+    if (group instanceof Command || !this.groups.has(group)) {
       commands.unshift(group);
+      group = undefined;
+    }
 
-    const normalizedCommands = !commands.length ? this.groups.get(DEFAULT_GROUP_NAME) : commands;
-    commands = this.groups.has(group) ? this.groups.get(group) : normalizedCommands;
+    // Default commands or user provided.
+    const defaultGroup = this.groups.get(group as string || DEFAULT_GROUP_NAME);
 
-    this.setMaxPrefix(commands);
+    // If a group is provided use the group's commands.
+    commands = (group && this.groups.has(group as string) ? this.groups.get(group as string) : commands) as string[];
 
-    commands.forEach(key => {
-      const command = this.commands.get(key);
-      setTimeout(() => {
-        command.run();
-      }, 100);
-    });
+    // If no commands at this point use default group.
+    if (!commands.length)
+      commands = defaultGroup;
 
-    this.running = true;
+    const cmds = commands.map(cmd => this.get(cmd));
+
+    this.setMaxPrefix(cmds);
+
+    // Run each command.
+    cmds.forEach(cmd => cmd.run());
+
+    this.running = cmds;
 
   }
 
   /**
-   * Kills all bound commands.
-   */
-  kill(): void;
+  * Kills running commands.
+  */
+  kill()
 
   /**
-   * Kills a command by name.
-   * 
-   * @param command the name of the command to kill
+   * Kills specified commands.
    */
-  kill(command: string): void;
+  kill(...commands: string[])
 
   /**
-   * Kills commands by name.
-   * 
-   * @param commands the names of the commands to be killed.
+   * Kills specified commands.
    */
-  kill(...commands: string[]): void;
+  kill(...commands: Command[])
 
-  kill(...names: string[]) {
-    if (!names.length)
-      names = [...this.commands.keys()];
-    this.running = false;
-    names.forEach(k => {
-      const command = this.commands.get(k);
-      command.kill();
-    });
+  kill(...commands: (string | Command)[]) {
+    const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.running];
+    cmds.forEach(cmd => cmd.kill());
   }
 
   /**
@@ -661,7 +820,7 @@ export class Spawnmon {
       process.on(signal, () => {
         const lines = [];
         [...this.commands.values()].forEach(cmd => {
-          lines.push(colorize(`${cmd.command} recived signal ${signal}.`, 'dim'));
+          lines.push(colorize(`${cmd.name} recived signal ${signal}.`, 'dim'));
           cmd.unsubscribe();
         });
         // could write to stdin or line by line but

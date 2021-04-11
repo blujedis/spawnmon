@@ -4,6 +4,10 @@
   "description": "Utility for running concurrent child processes during development.",
   "main": "dist/index",
   "types": "dist/index.d.ts",
+  "bin": {
+    "spawnmon": "bin/cli",
+    "sp": "bin/cli"
+  },
   "scripts": {
     "clean": "rimraf dist/",
     "build": "tsc -b",
@@ -13,7 +17,10 @@
     "test:watch": "jest --watch"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "CHANGE.md",
+    "README.md"
   ],
   "keywords": [
     "concurrently",
@@ -31,6 +38,7 @@
   "license": "MIT",
   "dependencies": {
     "ansi-colors": "^4.1.1",
+    "cli-table3": "^0.6.0",
     "cross-spawn": "^7.0.3",
     "log-symbols": "^4.1.0",
     "minimist": "^1.2.5",
@@ -38,6 +46,7 @@
     "rxjs": "^6.6.7",
     "string-length": "^4.0.2",
     "strip-ansi": "^6.0.0",
+    "supports-color": "^8.1.1",
     "tree-kill": "^1.2.2"
   },
   "devDependencies": {
@@ -46,6 +55,7 @@
     "@types/cross-spawn": "^6.0.2",
     "@types/minimist": "^1.2.1",
     "@types/node": "^12.0.0",
+    "@types/supports-color": "^8.1.0",
     "@types/wrap-ansi": "^3.0.0",
     "@typescript-eslint/eslint-plugin": "^4.21.0",
     "@typescript-eslint/parser": "^4.21.0",

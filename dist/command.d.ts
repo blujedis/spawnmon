@@ -74,10 +74,6 @@ export declare class Command {
      */
     log(data: string | Error, shouldKill?: boolean, shouldUpdate?: boolean): void;
     /**
-     * Gets the line prefix if enabled.
-     */
-    getPrefix(unpadded?: boolean): string;
-    /**
      * Sets the options object.
      *
      * @param options options object to update or set to.
@@ -90,8 +86,8 @@ export declare class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
-    onPinged(nameOrCommand: string | Command): void;
-    onIdle(nameOrCommand: string | Command): void;
+    onPinged(command: string | Command): void;
+    onIdle(command: string | Command): void;
     /**
      * Adds command to a group(s).
      *

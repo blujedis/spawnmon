@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createError = exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
+exports.simpleTimestamp = exports.createError = exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const strip_ansi_1 = __importDefault(require("strip-ansi"));
 exports.NEWLINE_EXP = /\r?\n$/u;
@@ -117,4 +117,21 @@ function createError(err) {
     return err;
 }
 exports.createError = createError;
+/**
+ * Timestamp only supports long format e.g. 'YYYY.MM.DD HH:mm:ss'
+ * If you need more advanced formatting pass in "onTimestamp"
+ * handler in Spawnmon options.
+ *
+ * @param format the format to be used.
+ * @param date the date to create timestamp for.
+ */
+function simpleTimestamp(date = new Date()) {
+    return date
+        .toISOString()
+        .split('.')[0] // remove offset too long.
+        .split('T') // split date and time.
+        .join(' ') // join using empty space.
+        .replace(/-/g, '.'); // change - to . it's shorter.
+}
+exports.simpleTimestamp = simpleTimestamp;
 //# sourceMappingURL=utils.js.map

@@ -21,8 +21,17 @@ const COMMAND_DEFAULTS = {
 class Command {
     constructor(options, spawnmon, parent) {
         this.subscriptions = [];
-        const { prefixDefaultColor, condensed } = spawnmon.options;
-        options = { ...COMMAND_DEFAULTS, color: prefixDefaultColor, condensed, timer: {}, pinger: {}, ...options };
+        const { defaultColor, condensed } = spawnmon.options;
+        options = {
+            ...COMMAND_DEFAULTS,
+            color: defaultColor,
+            condensed,
+            timer: {},
+            pinger: {},
+            ...options
+        };
+        if (/^win/.test(process.platform))
+            options.detached = false;
         const { pinger, timer } = options;
         // Timer/Pinger set to "active: false" because
         // when used internally must call method 
@@ -162,15 +171,6 @@ class Command {
         this.spawnmon.log(data, this, shouldKill);
     }
     /**
-     * Gets the line prefix if enabled.
-     */
-    getPrefix(unpadded = false) {
-        const prefix = this.spawnmon.getPrefix(this.name, this.options.color);
-        if (unpadded)
-            return prefix;
-        return prefix + ' ';
-    }
-    /**
      * Sets the options object.
      *
      * @param options options object to update or set to.
@@ -200,9 +200,9 @@ class Command {
         });
         return this;
     }
-    onPinged(nameOrCommand) {
+    onPinged(command) {
     }
-    onIdle(nameOrCommand) {
+    onIdle(command) {
     }
     /**
      * Adds command to a group(s).
@@ -229,12 +229,10 @@ class Command {
         // Create Spawnmon Child instance to manage subcommands.
         if (!this.spawnmonChild)
             this.spawnmonChild = new spawnmon_1.Spawnmon({ ...this.spawnmon.options });
-        const cmd = this.spawnmon.create(nameCmdOrOpts, commandArgs, initOptsOrAs, as);
-        if (cmd) {
-            // update with this command as its parent.
+        const cmd = this.spawnmonChild.create(nameCmdOrOpts, commandArgs, initOptsOrAs, as);
+        // update with this command as its parent.
+        if (cmd)
             cmd.parent = this;
-            // this.spawnmonChild.assign()
-        }
         return this;
     }
     /**

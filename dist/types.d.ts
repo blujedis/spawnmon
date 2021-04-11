@@ -1,6 +1,5 @@
 /// <reference types="node" />
 import { SpawnOptions, ProcessEnvOptions } from 'child_process';
-import { StylesType, StyleFunction } from 'ansi-colors';
 import { SocketConstructorOpts } from 'net';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
@@ -27,16 +26,16 @@ export interface ICommandOptions extends SpawnOptions {
 export interface ISpawnmonOptions extends ProcessEnvOptions {
     writestream?: NodeJS.WritableStream;
     transform?: TransformHandler;
-    prefix?: 'index' | 'command';
+    prefix?: string;
     prefixMax?: number;
-    prefixDefaultColor?: Color;
-    prefixTemplate?: string;
     prefixAlign?: 'left' | 'right' | 'center';
     prefixFill?: string;
+    defaultColor?: Color;
     condensed?: boolean;
     handleSignals?: boolean;
-    unformatted?: boolean;
+    raw?: boolean;
     maxProcesses?: number;
+    onTimestamp?: () => string;
 }
 export declare type PingerEvent = 'retry' | 'failed' | 'connected' | 'destroyed';
 export declare type PingerHandler = (retries?: number, pinger?: Pinger) => void;
@@ -70,4 +69,4 @@ export interface ISimpleTimerCounters {
     endTime: number;
     elasped: number;
 }
-export declare type Color = keyof StylesType<StyleFunction>;
+export declare type Color = string;

@@ -21,7 +21,8 @@ module.exports = {
     "@typescript-eslint"
   ],
   "ignorePatterns": [
-    "dist"
+    "dist",
+    "temp.js"
   ],
   "rules": {
     "semi": [2, "always"],

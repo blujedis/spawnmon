@@ -1,0 +1,40 @@
+import Table, { TableConstructorOptions, Cell, HorizontalAlignment, VerticalAlignment } from 'cli-table3';
+import borders from './borders';
+declare const table: {
+    options: {
+        chars?: Partial<Record<Table.CharName, string>>;
+        style?: Partial<{
+            "padding-left": number;
+            "padding-right": number;
+            head: string[];
+            border: string[];
+            compact: boolean;
+        }>;
+        truncate?: string;
+        colWidths?: number[];
+        rowHeights?: number[];
+        colAligns?: Table.HorizontalAlignment[];
+        rowAligns?: Table.VerticalAlignment[];
+        head?: string[];
+        wordWrap?: boolean;
+    };
+    rows: Table.Cell[][];
+    border: (type: Extract<keyof typeof borders, string>) => any;
+    middleless: () => any;
+    align: (type: 'columns' | 'rows', ...columns: (HorizontalAlignment | VerticalAlignment)[]) => any;
+    padding: (left: number, right?: number) => any;
+    compact: () => any;
+    expand: () => any;
+    wrapped: () => any;
+    unwrapped: () => any;
+    colorize: (type: 'border' | 'head', columns: string[]) => any;
+    uncolorize: (type?: 'border' | 'head') => any;
+    truncate: (chars?: string) => any;
+    width: (...widths: number[]) => any;
+    row: (...columns: Cell[]) => any;
+    init: (options?: TableConstructorOptions) => any;
+    create: (options?: TableConstructorOptions) => Table.Table;
+    head: (...columns: any[]) => any;
+    toString: () => string;
+};
+export default table;
