@@ -2,20 +2,20 @@ import { ParsedArgs } from 'minimist';
 import { Spawnmon } from '../spawnmon';
 import { readFileSync } from 'fs';
 import table from './table';
-import help, { HelpItem, HelpKey, IHelpItem } from './help';
-import { simpleFormatter, stylizer, toConfig, toFlag } from './utils';
+import helpItems, { HelpItem, HelpKey, IHelpItem } from './help';
+import { changeCase, simpleFormatter, stylizer, toConfig, toFlag } from './utils';
 import { join } from 'path';
 import { StyleFunction } from 'ansi-colors';
 
-const PACKAGE =
+const { name, ...pkg } =
   JSON.parse(readFileSync(join(__dirname, '../../package.json')).toString());
 
 const DEFAULT_MAP = {
-  app: PACKAGE.name,
-  ...PACKAGE
+  app: name,
+  ...pkg
 };
 
-const { templates } = help;
+const { templates } = helpItems;
 const nl = (c = 1) => c === 0 ? '' : '\n'.repeat(c);
 
 export function initApi(parsed: ParsedArgs) {
@@ -28,7 +28,7 @@ export function initApi(parsed: ParsedArgs) {
 
   // Private Methods
 
-  const toArrayProp = (prop, def = []) => {
+  const toArrayProp = (prop: string | string[], def = []) => {
     if (typeof prop === 'undefined')
       return def;
     if (!Array.isArray(prop))
@@ -37,23 +37,33 @@ export function initApi(parsed: ParsedArgs) {
   };
 
   const formatItemProps = (conf: IHelpItem) => {
-    const { description, help, examples } = conf;
     const map = { ...DEFAULT_MAP, ...conf };
     return {
-      description: simpleFormatter(description, map),
-      help: (help as string[]).map(h => simpleFormatter(h, map)),
-      examples: (examples as string[]).map(e => simpleFormatter(e, map)),
+      name: toFlag(changeCase(conf.name, 'dash')),
+      alias: toArrayProp(conf.alias).map(v => toFlag(v)).join(', '),
+      description: simpleFormatter(conf.description, map),
+      type: conf.type,
+      help: toArrayProp(conf.help).map(h => simpleFormatter(h, map)).join('\n'),
+      examples: toArrayProp(conf.examples).map(e => simpleFormatter(e, map)).join('\n')
     };
   };
 
   const buildHelpItem = <K extends HelpKey>(key: K) => {
-    const conf = help[key] as IHelpItem;
-    const cols = [];
-    conf.alias = toArrayProp(conf.alias);
-    conf.examples = toArrayProp(conf.examples);
-    conf.help = toArrayProp(conf.help);
-    const alias = (conf.alias as string[]).map(v => toFlag(v));
+    const conf = helpItems[key] as IHelpItem;
+    const { name, alias, description, type, help, examples } = formatItemProps(conf);
+    const row = [name, alias, description, type];
+    return {
+      row,
+      help,
+      examples
+    };
+  };
 
+  const buildHelpItems = () => {
+    
+    Object.keys(helpItems).forEach(k => {
+
+    });
   };
 
   // Public Methods
@@ -76,7 +86,7 @@ export function initApi(parsed: ParsedArgs) {
     return lines;
   };
 
-  const getSection = (label: string, color?: keyof StyleFunction, indent = '') => {
+  const getSectionHeader = (label: string, color?: keyof StyleFunction, indent = '') => {
     label = indent + label;
     if (color)
       stylizer(label, color);
@@ -99,7 +109,7 @@ export function initApi(parsed: ParsedArgs) {
     // If no help key then 
     if (!key) {
       lines = [...getHeader()];
-      lines = [...getSection('Commands', 'blueBright')];
+      lines = [...getSectionHeader('Commands', 'blueBright')];
     }
 
 

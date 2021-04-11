@@ -11,11 +11,13 @@ export type Help = { [K in HelpKey]: HelpConfigs[K] };
 
 export interface IHelpItem {
   name: string;
-  description?: string;
-  alias?: string | string[];
-  examples?: string[];
-  isFlag?: boolean;
-  help?: undefined | string | string[];
+  description: string;
+  alias: string | string[];
+  examples: string[];
+  isFlag: boolean;
+  help: undefined | string | string[];
+  type: string;
+  group: 'prefix' | 'misc' | 'styling' | 'process'
 }
 
 //////////////////////////////////////////////////
@@ -32,7 +34,9 @@ const version: IHelpItem = {
     `{app} -v`
   ],
   isFlag: true,
-  help: `Display the current version for {app}.`
+  help: `Display the current version for {app}.`,
+  type: 'boolean',
+  group: 'misc'
 };
 
 //////////////////////////////////////////////////
@@ -51,11 +55,13 @@ const prefix: IHelpItem = {
   help: [
     `Prefix template can contain any of the following three key words:`,
     `\nindex, command, pid, timestamp`
-  ]
+  ],
+  type: 'string',
+  group: 'prefix'
 };
 
 const prefixFill: IHelpItem = {
-  name: `prefix-fill`,
+  name: `prefixFill`,
   description: `Prefix alignment fill char`,
   alias: `f`,
   examples: [
@@ -65,11 +71,13 @@ const prefixFill: IHelpItem = {
   isFlag: true,
   help: [
     `Specify any single character to be used as "fill" when aligning prefixes.`
-  ]
+  ],
+  type: 'string',
+  group: 'prefix'
 };
 
 const prefixMax: IHelpItem = {
-  name: `prefix-max`,
+  name: `prefixMax`,
   description: `The maximum prefix length.`,
   alias: `m`,
   examples: [
@@ -77,11 +85,13 @@ const prefixMax: IHelpItem = {
     `{app} -m 8 'rollup -c -w'`
   ],
   isFlag: true,
-  help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`
+  help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
+  type: 'number',
+  group: 'prefix'
 };
 
 const prefixAlign: IHelpItem = {
-  name: `prefix-align`,
+  name: `prefixAlign`,
   description: `Prefix alignment left, right or center.`,
   alias: `a`,
   examples: [
@@ -95,7 +105,9 @@ const prefixAlign: IHelpItem = {
     `\nThe template [{command}] with alignment 'center' would look like`,
     `\n${stylizer('[...rollup...]', 'dim')}\n4{stylizer('[react-scripts]', 'dim')}`,
     `Use --prefix-fill to define the fill char "." or maybe a space " " when using alignment.`
-  ]
+  ],
+  type: 'string',
+  group: 'prefix'
 };
 
 const labels: IHelpItem = {
@@ -109,7 +121,9 @@ const labels: IHelpItem = {
     `{app} -l=[rup, cra] 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
-  help: `Display the current version for {app}.`
+  help: `Display the current version for {app}.`,
+  type: '[string]',
+  group: 'prefix'
 };
 
 const colors: IHelpItem = {
@@ -123,7 +137,9 @@ const colors: IHelpItem = {
     `{app} -c=[bgBlue.white.bold, cyan] 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
-  help: `Display the current version for {app}.`
+  help: `Display the current version for {app}.`,
+  type: '[string]',
+  group: 'prefix'
 };
 
 //////////////////////////////////////////////////////////
@@ -131,7 +147,7 @@ const colors: IHelpItem = {
 ///////////////////////////////////////////////////////////
 
 const defaultColor: IHelpItem = {
-  name: `default-color`,
+  name: `defaultColor`,
   description: `The default color for line prefixes.`,
   alias: `d`,
   examples: [
@@ -141,7 +157,9 @@ const defaultColor: IHelpItem = {
   isFlag: true,
   help: [
     `The default color applies to all prefixes use '--colors' to apply custom colors to each command.`
-  ]
+  ],
+  type: 'string',
+  group: 'styling'
 };
 
 const condensed: IHelpItem = {
@@ -153,7 +171,10 @@ const condensed: IHelpItem = {
     `{app} -n 'rollup -c -w'`
   ],
   isFlag: true,
-  help: ``
+  help: `Depending on the module run some output multiple newlines which can make the terminal unnecessarily length. Condensed limits this as much as reasonable.`,
+  type: 'boolean',
+  group: 'styling'
+
 };
 
 //////////////////////////////////////////////////
@@ -169,11 +190,13 @@ const raw: IHelpItem = {
     `{app} -r 'rollup -c -w'`
   ],
   isFlag: true,
-  help: `When using {app} programatically "transform" method is still called before writing.`
+  help: `When using {app} programatically "transform" method is still called before writing.`,
+  type: 'boolean',
+  group: 'process'
 };
 
 const maxProcesses: IHelpItem = {
-  name: `raw`,
+  name: `maxProcess`,
   description: `Specify the max number of processes.`,
   alias: `x`,
   examples: [
@@ -181,7 +204,9 @@ const maxProcesses: IHelpItem = {
     `{app} -x 5 'rollup -c -w'`
   ],
   isFlag: true,
-  help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`
+  help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`,
+  type: 'number',
+  group: 'process'
 };
 
 const configs = {
