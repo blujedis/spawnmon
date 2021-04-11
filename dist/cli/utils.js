@@ -84,9 +84,12 @@ exports.toConfig = toConfig;
  * @param styles rest param of styles.
  */
 function stylizer(str, style, ...styles) {
-    if (typeof style === 'string') {
+    if (style.includes('.')) {
         const segments = style.split('.');
         styles = [...segments, ...styles];
+    }
+    else if (ansi_colors_1.default[style]) {
+        styles.unshift(style);
     }
     return styles.reduce((result, style) => {
         if (!ansi_colors_1.default[style])
@@ -113,6 +116,8 @@ function changeCase(str, casing, preTrim = true) {
     // Normalizer, from here we can make several cases.
     // Not complete just handy enough for here.
     const preflight = s => {
+        if (!s)
+            return '';
         if (preTrim) // removes leading/trailing chars like . _ -
             s = s.trim().replace(/^[\s-_.]+/, '').replace(/[\s-_.]+$/, '');
         s = s.replace(/[A-Z]/g, ltr => `_${ltr.toLowerCase()}`); // to snake to split.
@@ -144,12 +149,11 @@ function simpleFormatter(str, obj, exp = TEMPLATE_EXP) {
         str = [str];
         isSingle = true;
     }
-    const lines = str;
-    lines.map(line => {
-        line.replace(exp, (s) => {
-            const clean = s.replace(/({|})/, '');
+    const lines = str.map(line => {
+        return line.replace(exp, (s) => {
+            const clean = s.replace(/({|})/g, '');
             const [key, helper] = clean.split('|');
-            const newVal = typeof obj[key] !== 'undefined' ? s : obj[key];
+            const newVal = typeof obj[key] === 'undefined' ? s : obj[key];
             if (!helper || typeof helpers[helper] === 'undefined')
                 return newVal;
             return helpers[helper](newVal);

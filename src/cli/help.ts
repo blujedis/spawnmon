@@ -8,6 +8,7 @@ export type HelpConfigs = typeof configs;
 export type HelpKey = keyof HelpConfigs;
 export type HelpItem<K extends HelpKey> = HelpConfigs[K];
 export type Help = { [K in HelpKey]: HelpConfigs[K] };
+export type HelpGroupKey = 'prefix' | 'misc' | 'styling' | 'process';
 
 export interface IHelpItem {
   name: string;
@@ -17,14 +18,18 @@ export interface IHelpItem {
   isFlag: boolean;
   help: undefined | string | string[];
   type: string;
-  group: 'prefix' | 'misc' | 'styling' | 'process'
+  group: HelpGroupKey;
+}
+
+export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
+  group: G
 }
 
 //////////////////////////////////////////////////
 // MISC 
 //////////////////////////////////////////////////
 
-const usage = `{app} [options] <commands...>`;
+const usage = `usage: {app} [options] <commands...>`;
 
 const version: IHelpItem = {
   name: `version`,
@@ -54,7 +59,7 @@ const prefix: IHelpItem = {
   isFlag: true,
   help: [
     `Prefix template can contain any of the following three key words:`,
-    `\nindex, command, pid, timestamp`
+    `index, command, pid, timestamp`
   ],
   type: 'string',
   group: 'prefix'

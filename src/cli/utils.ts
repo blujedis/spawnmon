@@ -101,9 +101,12 @@ export function toConfig(parsed: ParsedArgs) {
  */
 export function stylizer(str: string, style: string | keyof StyleFunction, ...styles: (keyof StyleFunction)[]) {
 
-  if (typeof style === 'string') {
+  if (style.includes('.')) {
     const segments = style.split('.') as (keyof StyleFunction)[];
     styles = [...segments, ...styles];
+  }
+  else if (ansiColors[style]) {
+    styles.unshift(style as keyof StyleFunction);
   }
 
   return styles.reduce((result, style) => {
@@ -133,6 +136,7 @@ export function changeCase(str: string, casing: Case, preTrim = true) {
   // Normalizer, from here we can make several cases.
   // Not complete just handy enough for here.
   const preflight = s => {
+    if (!s) return '';
     if (preTrim) // removes leading/trailing chars like . _ -
       s = s.trim().replace(/^[\s-_.]+/, '').replace(/[\s-_.]+$/, '');
     s = s.replace(/[A-Z]/g, ltr => `_${ltr.toLowerCase()}`); // to snake to split.
@@ -194,13 +198,11 @@ export function simpleFormatter<R extends Record<string, string>>(str: string | 
     isSingle = true;
   }
 
-  const lines = str as string[];
-
-  lines.map(line => {
-    line.replace(exp, (s) => {
-      const clean = s.replace(/({|})/, '');
+  const lines = str.map(line => {
+    return line.replace(exp, (s) => {
+      const clean = s.replace(/({|})/g, '');
       const [key, helper] = clean.split('|');
-      const newVal = typeof obj[key] !== 'undefined' ? s : obj[key];
+      const newVal = typeof obj[key] === 'undefined' ? s : obj[key];
       if (!helper || typeof helpers[helper] === 'undefined')
         return newVal;
       return helpers[helper](newVal);

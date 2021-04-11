@@ -7,7 +7,7 @@ const logo = fs_1.readFileSync(path_1.join(__dirname, './logo.txt')).toString().
 //////////////////////////////////////////////////
 // MISC 
 //////////////////////////////////////////////////
-const usage = `{app} [options] <commands...>`;
+const usage = `usage: {app} [options] <commands...>`;
 const version = {
     name: `version`,
     description: `Spawnmon version.`,
@@ -34,7 +34,7 @@ const prefix = {
     isFlag: true,
     help: [
         `Prefix template can contain any of the following three key words:`,
-        `\nindex, command, pid, timestamp`
+        `index, command, pid, timestamp`
     ],
     type: 'string',
     group: 'prefix'

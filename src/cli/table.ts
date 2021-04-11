@@ -9,8 +9,8 @@ const TABLE_DEFAULTS: TableConstructorOptions = {
 function initTable(options?: TableConstructorOptions) {
 
   const api = {
-    options: { ...TABLE_DEFAULTS, ...options },
-    rows: [] as Cell[][],
+    _options: { ...TABLE_DEFAULTS, ...options },
+    _rows: [] as Cell[][],
     border,
     middleless,
     align,
@@ -24,6 +24,7 @@ function initTable(options?: TableConstructorOptions) {
     truncate,
     width,
     row,
+    rows,
     init,
     create,
     head,
@@ -33,8 +34,8 @@ function initTable(options?: TableConstructorOptions) {
   // Adds border by type.
   function border(type: Extract<keyof typeof borders, string>) {
     const conf = borders[type];
-    api.options.chars = {
-      ...api.options.chars,
+    api._options.chars = {
+      ...api._options.chars,
       ...conf
     };
     return api;
@@ -42,8 +43,8 @@ function initTable(options?: TableConstructorOptions) {
 
   // removes divider for mid (bottom of each row.)
   function middleless() {
-    api.options.chars = {
-      ...api.options.chars,
+    api._options.chars = {
+      ...api._options.chars,
       'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''
     };
     return api;
@@ -51,88 +52,93 @@ function initTable(options?: TableConstructorOptions) {
 
   function head(...columns: any[]) {
     columns = columns.map(c => c + '');
-    api.options.head = columns;
+    api._options.head = columns;
     return api;
   }
 
   function width(...widths: number[]) {
-    api.options.colWidths = widths;
+    api._options.colWidths = widths;
     return api;
   }
 
   function padding(left: number, right?: number) {
     if (typeof right === 'undefined')
       right = left;
-    api.options.style['padding-left'] = left;
-    api.options.style['padding-right'] = right;
+    api._options.style['padding-left'] = left;
+    api._options.style['padding-right'] = right;
     return api;
   }
 
   function align(type: 'columns' | 'rows', ...columns: (HorizontalAlignment | VerticalAlignment)[]) {
     if (type === 'columns')
-      api.options.colAligns = columns as HorizontalAlignment[];
+      api._options.colAligns = columns as HorizontalAlignment[];
     else
-      api.options.rowAligns = columns as VerticalAlignment[];
+      api._options.rowAligns = columns as VerticalAlignment[];
     return api;
   }
 
   function compact() {
-    api.options.style.compact = true;
+    api._options.style.compact = true;
     return api;
   }
 
   function expand() {
-    api.options.style.compact = false;
+    api._options.style.compact = false;
     return api;
   }
 
   function wrapped() {
-    api.options.wordWrap = true;
+    api._options.wordWrap = true;
     return api;
   }
 
   function unwrapped() {
-    api.options.wordWrap = false;
+    api._options.wordWrap = false;
     return api;
   }
 
   function colorize(type: 'border' | 'head', columns: string[]) {
-    api.options.style[type] = columns;
+    api._options.style[type] = columns;
     return api;
   }
 
   function uncolorize(type?: 'border' | 'head') {
     if (!type) {
-      api.options.style.border = [];
-      api.options.style.head = [];
+      api._options.style.border = [];
+      api._options.style.head = [];
     }
     else {
-      api.options.style[type] = [];
+      api._options.style[type] = [];
     }
     return api;
   }
 
   function truncate(chars = '...') {
-    api.options.truncate = '...';
+    api._options.truncate = '...';
     return api;
   }
 
   // adds row to table.
   function row(...columns: Cell[]) {
-    api.rows.push(columns);
+    api._rows.push(columns);
+    return api;
+  }
+
+  function rows(...rows: Array<Cell[]>) {
+    api._rows = [...api._rows, ...rows];
     return api;
   }
 
   // creates the table using defined options.
   function create(options?: TableConstructorOptions) {
-    const tbl = new Table({ ...api.options, ...options });
-    api.rows.forEach(r => tbl.push(r));
+    const tbl = new Table({ ...api._options, ...options });
+    api._rows.forEach(r => tbl.push(r));
     return tbl;
   }
 
   // inits a new table api instance.
   function init(options?: TableConstructorOptions) {
-    return initTable(options);
+    return initTable();
   }
 
   function toString() {

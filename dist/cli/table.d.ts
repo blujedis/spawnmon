@@ -1,7 +1,7 @@
 import Table, { TableConstructorOptions, Cell, HorizontalAlignment, VerticalAlignment } from 'cli-table3';
 import borders from './borders';
 declare const table: {
-    options: {
+    _options: {
         chars?: Partial<Record<Table.CharName, string>>;
         style?: Partial<{
             "padding-left": number;
@@ -18,7 +18,7 @@ declare const table: {
         head?: string[];
         wordWrap?: boolean;
     };
-    rows: Table.Cell[][];
+    _rows: Table.Cell[][];
     border: (type: Extract<keyof typeof borders, string>) => any;
     middleless: () => any;
     align: (type: 'columns' | 'rows', ...columns: (HorizontalAlignment | VerticalAlignment)[]) => any;
@@ -32,6 +32,7 @@ declare const table: {
     truncate: (chars?: string) => any;
     width: (...widths: number[]) => any;
     row: (...columns: Cell[]) => any;
+    rows: (...rows: Array<Cell[]>) => any;
     init: (options?: TableConstructorOptions) => any;
     create: (options?: TableConstructorOptions) => Table.Table;
     head: (...columns: any[]) => any;

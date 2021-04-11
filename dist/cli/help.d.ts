@@ -4,6 +4,7 @@ export declare type HelpItem<K extends HelpKey> = HelpConfigs[K];
 export declare type Help = {
     [K in HelpKey]: HelpConfigs[K];
 };
+export declare type HelpGroupKey = 'prefix' | 'misc' | 'styling' | 'process';
 export interface IHelpItem {
     name: string;
     description: string;
@@ -12,7 +13,10 @@ export interface IHelpItem {
     isFlag: boolean;
     help: undefined | string | string[];
     type: string;
-    group: 'prefix' | 'misc' | 'styling' | 'process';
+    group: HelpGroupKey;
+}
+export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
+    group: G;
 }
 declare const configs: {
     templates: {

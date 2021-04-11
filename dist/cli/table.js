@@ -11,8 +11,8 @@ const TABLE_DEFAULTS = {
 };
 function initTable(options) {
     const api = {
-        options: { ...TABLE_DEFAULTS, ...options },
-        rows: [],
+        _options: { ...TABLE_DEFAULTS, ...options },
+        _rows: [],
         border,
         middleless,
         align,
@@ -26,6 +26,7 @@ function initTable(options) {
         truncate,
         width,
         row,
+        rows,
         init,
         create,
         head,
@@ -34,91 +35,95 @@ function initTable(options) {
     // Adds border by type.
     function border(type) {
         const conf = borders_1.default[type];
-        api.options.chars = {
-            ...api.options.chars,
+        api._options.chars = {
+            ...api._options.chars,
             ...conf
         };
         return api;
     }
     // removes divider for mid (bottom of each row.)
     function middleless() {
-        api.options.chars = {
-            ...api.options.chars,
+        api._options.chars = {
+            ...api._options.chars,
             'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': ''
         };
         return api;
     }
     function head(...columns) {
         columns = columns.map(c => c + '');
-        api.options.head = columns;
+        api._options.head = columns;
         return api;
     }
     function width(...widths) {
-        api.options.colWidths = widths;
+        api._options.colWidths = widths;
         return api;
     }
     function padding(left, right) {
         if (typeof right === 'undefined')
             right = left;
-        api.options.style['padding-left'] = left;
-        api.options.style['padding-right'] = right;
+        api._options.style['padding-left'] = left;
+        api._options.style['padding-right'] = right;
         return api;
     }
     function align(type, ...columns) {
         if (type === 'columns')
-            api.options.colAligns = columns;
+            api._options.colAligns = columns;
         else
-            api.options.rowAligns = columns;
+            api._options.rowAligns = columns;
         return api;
     }
     function compact() {
-        api.options.style.compact = true;
+        api._options.style.compact = true;
         return api;
     }
     function expand() {
-        api.options.style.compact = false;
+        api._options.style.compact = false;
         return api;
     }
     function wrapped() {
-        api.options.wordWrap = true;
+        api._options.wordWrap = true;
         return api;
     }
     function unwrapped() {
-        api.options.wordWrap = false;
+        api._options.wordWrap = false;
         return api;
     }
     function colorize(type, columns) {
-        api.options.style[type] = columns;
+        api._options.style[type] = columns;
         return api;
     }
     function uncolorize(type) {
         if (!type) {
-            api.options.style.border = [];
-            api.options.style.head = [];
+            api._options.style.border = [];
+            api._options.style.head = [];
         }
         else {
-            api.options.style[type] = [];
+            api._options.style[type] = [];
         }
         return api;
     }
     function truncate(chars = '...') {
-        api.options.truncate = '...';
+        api._options.truncate = '...';
         return api;
     }
     // adds row to table.
     function row(...columns) {
-        api.rows.push(columns);
+        api._rows.push(columns);
+        return api;
+    }
+    function rows(...rows) {
+        api._rows = [...api._rows, ...rows];
         return api;
     }
     // creates the table using defined options.
     function create(options) {
-        const tbl = new cli_table3_1.default({ ...api.options, ...options });
-        api.rows.forEach(r => tbl.push(r));
+        const tbl = new cli_table3_1.default({ ...api._options, ...options });
+        api._rows.forEach(r => tbl.push(r));
         return tbl;
     }
     // inits a new table api instance.
     function init(options) {
-        return initTable(options);
+        return initTable();
     }
     function toString() {
         return create().toString();

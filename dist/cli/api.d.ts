@@ -8,5 +8,5 @@ export declare function initApi(parsed: ParsedArgs): {
     hasCommand: (...command: string[]) => boolean;
     hasFlag: (...flag: string[]) => boolean;
     run: () => void;
-    showHelp: (key?: HelpKey) => void;
+    showHelp: (key?: HelpKey | 'examples') => void;
 };
