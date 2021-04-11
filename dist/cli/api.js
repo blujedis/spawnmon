@@ -9,13 +9,12 @@ const fs_1 = require("fs");
 const help_1 = __importDefault(require("./help"));
 const utils_1 = require("./utils");
 const path_1 = require("path");
-const PACKAGE = JSON.parse(fs_1.readFileSync(path_1.join(__dirname, '../../package.json')).toString());
+const { name, ...pkg } = JSON.parse(fs_1.readFileSync(path_1.join(__dirname, '../../package.json')).toString());
 const DEFAULT_MAP = {
-    app: PACKAGE.name,
-    ...PACKAGE
+    app: name,
+    ...pkg
 };
 const { templates } = help_1.default;
-const nl = (c = 1) => c === 0 ? '' : '\n'.repeat(c);
 function initApi(parsed) {
     const config = utils_1.toConfig(parsed);
     const spawnmon = new spawnmon_1.Spawnmon({ ...config.options });
@@ -30,21 +29,36 @@ function initApi(parsed) {
         return prop;
     };
     const formatItemProps = (conf) => {
-        const { description, help, examples } = conf;
         const map = { ...DEFAULT_MAP, ...conf };
         return {
-            description: utils_1.simpleFormatter(description, map),
-            help: help.map(h => utils_1.simpleFormatter(h, map)),
-            examples: examples.map(e => utils_1.simpleFormatter(e, map)),
+            name: utils_1.toFlag(utils_1.changeCase(conf.name, 'dash')),
+            alias: toArrayProp(conf.alias).map(v => utils_1.toFlag(v)).join(', '),
+            description: utils_1.simpleFormatter(conf.description, map),
+            type: conf.type,
+            help: toArrayProp(conf.help).map(h => utils_1.simpleFormatter(h, map)).join('\n'),
+            examples: toArrayProp(conf.examples).map(e => utils_1.simpleFormatter(e, map)).join('\n'),
+            group: conf.group,
+            isFlag: conf.isFlag
         };
     };
     const buildHelpItem = (key) => {
         const conf = help_1.default[key];
-        const cols = [];
-        conf.alias = toArrayProp(conf.alias);
-        conf.examples = toArrayProp(conf.examples);
-        conf.help = toArrayProp(conf.help);
-        const alias = conf.alias.map(v => utils_1.toFlag(v));
+        const { name, alias, description, type, help, examples, group } = formatItemProps(conf);
+        const row = [name, alias, description, type];
+        return {
+            row,
+            help,
+            examples,
+            group
+        };
+    };
+    const buildHelpItems = () => {
+        const groups = Object.keys(help_1.default).reduce((result, key) => {
+            const conf = buildHelpItem(key);
+            result[conf.group] = result[conf.group] || [];
+            result[conf.group] = [...result[conf.group], conf.row];
+            return result;
+        }, {});
     };
     // Public Methods
     const hasFlag = (...flag) => {
@@ -55,14 +69,14 @@ function initApi(parsed) {
     };
     const getHeader = (usage = true) => {
         const lines = [];
-        lines.push(templates.logo);
+        lines.push(' ' + templates.logo); // need space for logo alignment.
         lines.push('');
         if (usage)
             lines.push(templates.usage);
         lines.push('');
         return lines;
     };
-    const getSection = (label, color, indent = '') => {
+    const getSectionHeader = (label, color, indent = '') => {
         label = indent + label;
         if (color)
             utils_1.stylizer(label, color);
@@ -81,7 +95,8 @@ function initApi(parsed) {
         // If no help key then 
         if (!key) {
             lines = [...getHeader()];
-            lines = [...getSection('Commands', 'blueBright')];
+            lines = [...lines, ...getSectionHeader('Commands', 'blueBright')];
+            console.log(lines.join('\n'));
         }
     };
     return {

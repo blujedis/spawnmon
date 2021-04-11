@@ -6,11 +6,13 @@ export declare type Help = {
 };
 export interface IHelpItem {
     name: string;
-    description?: string;
-    alias?: string | string[];
-    examples?: string[];
-    isFlag?: boolean;
-    help?: undefined | string | string[];
+    description: string;
+    alias: string | string[];
+    examples: string[];
+    isFlag: boolean;
+    help: undefined | string | string[];
+    type: string;
+    group: 'prefix' | 'misc' | 'styling' | 'process';
 }
 declare const configs: {
     templates: {

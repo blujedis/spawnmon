@@ -16,7 +16,6 @@ const DEFAULT_MAP = {
 };
 
 const { templates } = helpItems;
-const nl = (c = 1) => c === 0 ? '' : '\n'.repeat(c);
 
 export function initApi(parsed: ParsedArgs) {
 
@@ -44,26 +43,31 @@ export function initApi(parsed: ParsedArgs) {
       description: simpleFormatter(conf.description, map),
       type: conf.type,
       help: toArrayProp(conf.help).map(h => simpleFormatter(h, map)).join('\n'),
-      examples: toArrayProp(conf.examples).map(e => simpleFormatter(e, map)).join('\n')
+      examples: toArrayProp(conf.examples).map(e => simpleFormatter(e, map)).join('\n'),
+      group: conf.group,
+      isFlag: conf.isFlag
     };
   };
 
   const buildHelpItem = <K extends HelpKey>(key: K) => {
     const conf = helpItems[key] as IHelpItem;
-    const { name, alias, description, type, help, examples } = formatItemProps(conf);
+    const { name, alias, description, type, help, examples, group } = formatItemProps(conf);
     const row = [name, alias, description, type];
     return {
       row,
       help,
-      examples
+      examples,
+      group
     };
   };
 
   const buildHelpItems = () => {
-    
-    Object.keys(helpItems).forEach(k => {
-
-    });
+    const groups = Object.keys(helpItems).reduce((result, key) => {
+      const conf = buildHelpItem(key as HelpKey);
+      result[conf.group] = result[conf.group] || [];
+      result[conf.group] = [...result[conf.group], conf.row];
+      return result;
+    }, {} as { [key: string]: any[] });
   };
 
   // Public Methods
@@ -78,7 +82,7 @@ export function initApi(parsed: ParsedArgs) {
 
   const getHeader = (usage = true) => {
     const lines = [];
-    lines.push(templates.logo);
+    lines.push(' ' + templates.logo); // need space for logo alignment.
     lines.push('');
     if (usage)
       lines.push(templates.usage);
@@ -109,7 +113,8 @@ export function initApi(parsed: ParsedArgs) {
     // If no help key then 
     if (!key) {
       lines = [...getHeader()];
-      lines = [...getSectionHeader('Commands', 'blueBright')];
+      lines = [...lines, ...getSectionHeader('Commands', 'blueBright')];
+      console.log(lines.join('\n'));
     }
 
 

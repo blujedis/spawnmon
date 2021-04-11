@@ -16,7 +16,9 @@ const version = {
         `{app} -v`
     ],
     isFlag: true,
-    help: `Display the current version for {app}.`
+    help: `Display the current version for {app}.`,
+    type: 'boolean',
+    group: 'misc'
 };
 //////////////////////////////////////////////////
 // PREFIX 
@@ -33,10 +35,12 @@ const prefix = {
     help: [
         `Prefix template can contain any of the following three key words:`,
         `\nindex, command, pid, timestamp`
-    ]
+    ],
+    type: 'string',
+    group: 'prefix'
 };
 const prefixFill = {
-    name: `prefix-fill`,
+    name: `prefixFill`,
     description: `Prefix alignment fill char`,
     alias: `f`,
     examples: [
@@ -46,10 +50,12 @@ const prefixFill = {
     isFlag: true,
     help: [
         `Specify any single character to be used as "fill" when aligning prefixes.`
-    ]
+    ],
+    type: 'string',
+    group: 'prefix'
 };
 const prefixMax = {
-    name: `prefix-max`,
+    name: `prefixMax`,
     description: `The maximum prefix length.`,
     alias: `m`,
     examples: [
@@ -57,10 +63,12 @@ const prefixMax = {
         `{app} -m 8 'rollup -c -w'`
     ],
     isFlag: true,
-    help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`
+    help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
+    type: 'number',
+    group: 'prefix'
 };
 const prefixAlign = {
-    name: `prefix-align`,
+    name: `prefixAlign`,
     description: `Prefix alignment left, right or center.`,
     alias: `a`,
     examples: [
@@ -74,7 +82,9 @@ const prefixAlign = {
         `\nThe template [{command}] with alignment 'center' would look like`,
         `\n${utils_1.stylizer('[...rollup...]', 'dim')}\n4{stylizer('[react-scripts]', 'dim')}`,
         `Use --prefix-fill to define the fill char "." or maybe a space " " when using alignment.`
-    ]
+    ],
+    type: 'string',
+    group: 'prefix'
 };
 const labels = {
     name: `labels`,
@@ -87,7 +97,9 @@ const labels = {
         `{app} -l=[rup, cra] 'rollup -c -w' 'react-scripts start'`
     ],
     isFlag: true,
-    help: `Display the current version for {app}.`
+    help: `Display the current version for {app}.`,
+    type: '[string]',
+    group: 'prefix'
 };
 const colors = {
     name: `colors`,
@@ -100,13 +112,15 @@ const colors = {
         `{app} -c=[bgBlue.white.bold, cyan] 'rollup -c -w' 'react-scripts start'`
     ],
     isFlag: true,
-    help: `Display the current version for {app}.`
+    help: `Display the current version for {app}.`,
+    type: '[string]',
+    group: 'prefix'
 };
 //////////////////////////////////////////////////////////
 // STYLING
 ///////////////////////////////////////////////////////////
 const defaultColor = {
-    name: `default-color`,
+    name: `defaultColor`,
     description: `The default color for line prefixes.`,
     alias: `d`,
     examples: [
@@ -116,7 +130,9 @@ const defaultColor = {
     isFlag: true,
     help: [
         `The default color applies to all prefixes use '--colors' to apply custom colors to each command.`
-    ]
+    ],
+    type: 'string',
+    group: 'styling'
 };
 const condensed = {
     name: `condensed`,
@@ -127,7 +143,9 @@ const condensed = {
         `{app} -n 'rollup -c -w'`
     ],
     isFlag: true,
-    help: ``
+    help: `Depending on the module run some output multiple newlines which can make the terminal unnecessarily length. Condensed limits this as much as reasonable.`,
+    type: 'boolean',
+    group: 'styling'
 };
 //////////////////////////////////////////////////
 // STREAMS & PROCESS 
@@ -141,10 +159,12 @@ const raw = {
         `{app} -r 'rollup -c -w'`
     ],
     isFlag: true,
-    help: `When using {app} programatically "transform" method is still called before writing.`
+    help: `When using {app} programatically "transform" method is still called before writing.`,
+    type: 'boolean',
+    group: 'process'
 };
 const maxProcesses = {
-    name: `raw`,
+    name: `maxProcess`,
     description: `Specify the max number of processes.`,
     alias: `x`,
     examples: [
@@ -152,7 +172,9 @@ const maxProcesses = {
         `{app} -x 5 'rollup -c -w'`
     ],
     isFlag: true,
-    help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`
+    help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`,
+    type: 'number',
+    group: 'process'
 };
 const configs = {
     templates: {
