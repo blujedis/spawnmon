@@ -194,9 +194,9 @@ function initApi(argv) {
         const cleaned = utils_1.filterOptions([...aliases, 'version'], config.options);
         const spawnmon = new spawnmon_1.Spawnmon(cleaned);
         config.commands.forEach(opts => {
-            // console.log(opts);
-            const cmd = spawnmon.add(opts);
+            spawnmon.add(opts);
         });
+        spawnmon.run();
     };
     return {
         argv,

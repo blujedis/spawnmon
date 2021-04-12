@@ -125,12 +125,14 @@ exports.createError = createError;
  * @param format the format to be used.
  * @param date the date to create timestamp for.
  */
-function simpleTimestamp(date = new Date()) {
-    return date
+function simpleTimestamp(date = new Date(), timeOnly = true) {
+    const segments = date
         .toISOString()
         .split('.')[0] // remove offset too long.
-        .split('T') // split date and time.
-        .join(' ') // join using empty space.
+        .split('T'); // split date and time.
+    if (!timeOnly)
+        return segments[1];
+    return segments.join(' ') // join using empty space.
         .replace(/-/g, '.'); // change - to . it's shorter.
 }
 exports.simpleTimestamp = simpleTimestamp;

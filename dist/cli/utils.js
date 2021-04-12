@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.toConfig = exports.toCommands = exports.toNormalized = exports.filterOptions = exports.toMinimistOptions = void 0;
+exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.toConfig = exports.toCommands = exports.toNormalized = exports.filterOptions = exports.argToArray = exports.toMinimistOptions = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
-const SPLIT_ARGS_EXP = /('(\\'|[^'])*'|"(\\"|[^"])*"|\/(\\\/|[^/])*\/|(\\ |[^ ])+|[\w-]+)/g;
+const SPLIT_ARGS_EXP = /('.*?'|".*?"|\S+)/g;
 const CSV_EXP = /(\w,?)+/;
 const TEMPLATE_EXP = /\{.+?\}/g;
 const helpers = {
@@ -50,6 +50,40 @@ function toMinimistOptions(helpItems) {
 }
 exports.toMinimistOptions = toMinimistOptions;
 /**
+ * Ensure a parsed argument is properly converted to an array
+ * from string removing {} chars.
+ *
+ * @param args args that should be an array.
+ */
+function argToArray(args, type = 'string', delimiter = ',') {
+    // Not a fan of doing all this, change to different parser
+    // minimist is mini-miss a lot of things here, too much clean up!
+    if (typeof args === 'string') {
+        args = args.replace(/({|})/g, '');
+        args = args.split(',').map(v => v.trim());
+    }
+    let _args = toArray(args);
+    if (type === 'boolean' || type === 'number') {
+        if (type === 'boolean') {
+            _args = _args.map(v => {
+                if (/^(true|1)$/.test(v))
+                    return v === true || v === 'true' || v === '1' ? true : false;
+                return false;
+            });
+        }
+        else {
+            _args = _args.map(v => {
+                v = parseFloat(v);
+                if (isNaN(v))
+                    return undefined;
+                return v;
+            });
+        }
+    }
+    return _args;
+}
+exports.argToArray = argToArray;
+/**
  * Removes unnecessary keys.
  *
  * @param keys the keys to filter/remove.
@@ -82,10 +116,17 @@ function toNormalized(parsed) {
             .map(v => v.trim());
     }
     // TODO: need to do some extra work in here
-    // for parsed types etc.
+    // for parsed types etc, too much work to use
+    // minimist will switch to more adv parser soon.
     // in this use case no need for '--' as all args props
     // not part of a command can only be consumed by Spawnmon.
     delete parsed['--'];
+    for (const k in parsed) {
+        if (k.includes('-')) {
+            parsed[changeCase(k, 'camel')] = parsed[k];
+            delete parsed[k];
+        }
+    }
     return parsed;
 }
 exports.toNormalized = toNormalized;
@@ -95,18 +136,22 @@ exports.toNormalized = toNormalized;
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-function toCommands(commands, as = []) {
+function toCommands(commands, options) {
+    const { as, colors, delay, mute } = options;
     // iterate and build the commnds.
     return commands.map((v, index) => {
-        const args = v.split(SPLIT_ARGS_EXP);
+        const args = v.split(SPLIT_ARGS_EXP).filter(v => {
+            return v.length && v !== ' ';
+        });
         const command = args.shift();
-        //const parsed = minimist([v]);
-        // console.log(parsed);
         return {
             command,
             args,
             index,
-            as: (as && as[index]) || command
+            as: (as && as[index]) || command,
+            color: colors[index],
+            delay: delay[index],
+            mute: mute[index]
         };
     });
 }
@@ -122,8 +167,14 @@ function toConfig(parsed) {
     // Destructure out the commands from
     // Spawnmon flag options.
     // NOTE: labels an alias for "as".
-    const { _, as, labels, ...options } = normalized;
-    const commands = toCommands(_, as || labels);
+    const { _, as, labels, colors, delay, mute, ...options } = normalized;
+    const extended = {
+        as: argToArray(as || labels),
+        colors: argToArray(colors),
+        delay: argToArray(delay, 'number'),
+        mute: argToArray(mute, 'boolean'),
+    };
+    const commands = toCommands(_, extended);
     return {
         commands,
         options: options
@@ -191,9 +242,9 @@ function changeCase(str, casing, preTrim = true) {
     if (casing === 'dot')
         return preflight(str).join('.');
     if (casing === 'camel')
-        return preflight(str).map((s, i) => i > 0 ? capitalize(s) : s);
+        return preflight(str).map((s, i) => i > 0 ? capitalize(s) : s).join('');
     if (casing === 'title')
-        return preflight(str).map(s => capitalize(s));
+        return preflight(str).map(s => capitalize(s)).join('');
     return str;
 }
 exports.changeCase = changeCase;

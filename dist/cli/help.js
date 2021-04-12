@@ -25,11 +25,11 @@ const version = {
 //////////////////////////////////////////////////
 const prefix = {
     name: `prefix`,
-    description: `The prefix template.`,
+    description: `The prefix template in quotes.`,
     alias: `p`,
     examples: [
-        `{app} -prefix [{pid}] 'rollup -c -w'`,
-        `{app} -p [{timestamp}] 'rollup -c -w'`
+        `{app} --prefix "[{pid}]" 'rollup -c -w'`,
+        `{app} -p "[{timestamp}]" 'rollup -c -w'`
     ],
     isFlag: true,
     help: [
@@ -45,7 +45,7 @@ const prefixFill = {
     description: `Prefix alignment fill char`,
     alias: `f`,
     examples: [
-        `{app} -prefix-fill ' ' 'rollup -c -w'`,
+        `{app} --prefix-fill ' ' 'rollup -c -w'`,
         `{app} -f '.' 'rollup -c -w'`
     ],
     isFlag: true,
@@ -61,7 +61,7 @@ const prefixMax = {
     description: `The maximum prefix length.`,
     alias: `m`,
     examples: [
-        `{app} -prefix-max 8 'rollup -c -w'`,
+        `{app} --prefix-max 8 'rollup -c -w'`,
         `{app} -m 8 'rollup -c -w'`
     ],
     isFlag: true,
@@ -75,7 +75,7 @@ const prefixAlign = {
     description: `Prefix alignment left, right or center.`,
     alias: `a`,
     examples: [
-        `{app} --prefix-alignment right 'rollup -c -w'`,
+        `{app} --prefix-align right 'rollup -c -w'`,
         `{app} -a right 'rollup -c -w'`
     ],
     isFlag: true,
@@ -94,10 +94,9 @@ const labels = {
     description: `User defined labels for commands.`,
     alias: [`l`],
     examples: [
-        `{app} -labels [rup, cra] 'rollup -c -w' 'react-scripts start'`,
-        `{app} -l [rup, cra] 'rollup -c -w' 'react-scripts start'`,
-        `{app} -labels=[rup, cra] 'rollup -c -w' 'react-scripts start'`,
-        `{app} -l=[rup, cra] 'rollup -c -w' 'react-scripts start'`
+        `{app} --labels {rup,cra} 'rollup -c -w' 'react-scripts start'`,
+        `{app} -l {rup,cra} 'rollup -c -w' 'react-scripts start'`,
+        `{app} --labels={rup,cra} 'rollup -c -w' 'react-scripts start'`
     ],
     isFlag: true,
     help: `Display the current version for {app}.`,
@@ -109,10 +108,9 @@ const colors = {
     description: `Specify prefix color by name or index.`,
     alias: 'c',
     examples: [
-        `{app} -colors [yellow, cyan] 'rollup -c -w' 'react-scripts start'`,
-        `{app} -c [bgBlue.white, blue] 'rollup -c -w' 'react-scripts start'`,
-        `{app} -colors=[yellow, green] 'rollup -c -w' 'react-scripts start'`,
-        `{app} -c=[bgBlue.white.bold, cyan] 'rollup -c -w' 'react-scripts start'`
+        `{app} --colors {yellow,cyan} 'rollup -c -w' 'react-scripts start'`,
+        `{app} -c {yellow,cyan} 'rollup -c -w' 'react-scripts start'`,
+        `{app} --colors={yellow,cyan} 'rollup -c -w' 'react-scripts start'`
     ],
     isFlag: true,
     help: `Display the current version for {app}.`,
@@ -125,10 +123,10 @@ const colors = {
 const defaultColor = {
     name: `defaultColor`,
     description: `The default color for line prefixes.`,
-    alias: `d`,
+    alias: `t`,
     examples: [
         `{app} --default-color dim 'rollup -c -w'`,
-        `{app} -d bgRed.yellow 'rollup -c -w'`
+        `{app} -t bgRed.yellow 'rollup -c -w'`
     ],
     isFlag: true,
     help: [
@@ -153,14 +151,40 @@ const condensed = {
     default: false
 };
 //////////////////////////////////////////////////
-// STREAMS & PROCESS 
+// PROCESS 
 //////////////////////////////////////////////////
+const delay = {
+    name: `raw`,
+    description: `Delays the start of the command.`,
+    alias: `d`,
+    examples: [
+        `{app} --delay {500} 'rollup -c -w'`,
+        `{app} -d {0,1200} 'rollup -c -w' 'react-scripts start'`
+    ],
+    isFlag: true,
+    help: `When using {app} you can delay the start of individual scripts. There are various reasons why you might want to do this. One might be to make logs easier to read since spawn processes fire off at once.`,
+    type: '[number]',
+    group: 'process'
+};
+const mute = {
+    name: `raw`,
+    description: `Mutes the output of a given spawned process.`,
+    alias: `d`,
+    examples: [
+        `{app} --mute {true} 'rollup -c -w'`,
+        `{app} -u {0,true} 'rollup -c -w' 'react-scripts start'`
+    ],
+    isFlag: true,
+    help: `Specifying mute for a command/process will silence the output of that command's output.`,
+    type: '[boolean]',
+    group: 'process'
+};
 const raw = {
     name: `raw`,
     description: `Directly log lines to write/output stream.`,
     alias: `r`,
     examples: [
-        `{app} -raw 'rollup -c -w'`,
+        `{app} --raw 'rollup -c -w'`,
         `{app} -r 'rollup -c -w'`
     ],
     isFlag: true,
@@ -174,7 +198,7 @@ const maxProcesses = {
     description: `Specify the max number of processes.`,
     alias: `x`,
     examples: [
-        `{app} -max-processes 5 'rollup -c -w'`,
+        `{app} --max-processes 5 'rollup -c -w'`,
         `{app} -x 5 'rollup -c -w'`
     ],
     isFlag: true,
@@ -198,7 +222,9 @@ const configs = {
     prefixMax,
     labels,
     version,
-    colors
+    colors,
+    delay,
+    mute
 };
 exports.default = configs;
 //# sourceMappingURL=help.js.map

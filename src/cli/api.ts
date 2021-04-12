@@ -254,11 +254,10 @@ export function initApi(argv: any[]) {
     const cleaned = filterOptions([...aliases, 'version'], config.options);
     const spawnmon = new Spawnmon(cleaned);
     config.commands.forEach(opts => {
-      // console.log(opts);
-      const cmd = spawnmon.add(opts);
+      spawnmon.add(opts);
     });
+    spawnmon.run();
   };
-
 
   return {
     argv,

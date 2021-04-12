@@ -17,6 +17,13 @@ export declare class Spawnmon {
      */
     protected prepareOutput(data: any): string;
     /**
+     * Gets the index of a command.
+     *
+     * @param command the command name, alias or instance to get an index for.
+     * @param group the group to get the index of if none assumes the default.
+     */
+    protected getIndex(command: string | Command, group?: string): [number, number];
+    /**
      * Pads the prefix for display in console.
      *
      * @param prefix the prefix to be padded.
@@ -25,31 +32,17 @@ export declare class Spawnmon {
      */
     protected padPrefix(prefix: string, offset: number, align?: 'left' | 'right' | 'center'): string;
     /**
-     * Formats string for log output.
-     *
-     * @param output the data to be formatted.
-     * @param prefix optional prefix for each line.
-     * @param condensed indicates output should be condensed removing spaces.
+     * Gets the prefix key from known keys in the prefix template.
      */
-    protected formatLines(output: string, command?: string | Command): string;
+    protected getPrefixKey(): string;
     /**
-     * Gets the index of a command.
+     * Sets the maximum allowable prefix VALUE length based on prefix key type.
+     * This is NOT based on the length of the entire prefix but rather the
+     * defined value e.g. index, command name, pid or timestamp.
      *
-     * @param command the command name, alias or instance to get an index for.
-     * @param group the group to get the index of if none assumes the default.
+     * @param commands list of command names or Command instances.
      */
-    protected getIndex(command: string | Command, group?: string): number;
-    /**
-     * Gets the prefix key and value.
-     *
-     * @param command the command to get prefix for.
-     * @param group the group the prefix belongs to if not default.
-     */
-    protected getPrefixConfig(command: string | Command, label?: string, group?: string): {
-        template: string;
-        key: string;
-        val: any;
-    };
+    protected setMaxPrefix(commands: (string | Command)[]): number;
     /**
      * Gets and formats the prefix for logging to output stream.
      *
@@ -58,18 +51,13 @@ export declare class Spawnmon {
      */
     protected getPrefix(command: string | Command, color?: Color, group?: string): string;
     /**
-     * Iterates commands and builds values for determining the max
-     * allowed prefix length. So the longest value basically.
+     * Formats string for log output.
      *
-     * @param commands command names or instances.
+     * @param output the data to be formatted.
+     * @param prefix optional prefix for each line.
+     * @param condensed indicates output should be condensed removing spaces.
      */
-    protected getMaxPrefixValues(...commands: (string | Command)[]): void;
-    /**
-     * Sets the maximum allowable prefix length based on command names.
-     *
-     * @param values list of command names.
-     */
-    protected setMaxPrefix(values: (string | Command)[]): void;
+    protected formatLines(output: string, command?: string | Command): string;
     /**
      * Gets process id's of commands.
      */

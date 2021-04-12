@@ -3,6 +3,7 @@ import { StyleFunction } from 'ansi-colors';
 import { HelpConfigs } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
 export declare type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
+export declare type ToArrayType = string | boolean | number;
 /**
  * Gets preparred items for minimist.
  *
@@ -12,6 +13,13 @@ export declare function toMinimistOptions(helpItems: HelpConfigs): {
     aliases: any[];
     options: {};
 };
+/**
+ * Ensure a parsed argument is properly converted to an array
+ * from string removing {} chars.
+ *
+ * @param args args that should be an array.
+ */
+export declare function argToArray<T = string>(args: string | string[], type?: ToArrayType, delimiter?: string): T[];
 /**
  * Removes unnecessary keys.
  *
@@ -33,11 +41,19 @@ export declare function toNormalized(parsed: ParsedArgs): Omit<minimist.ParsedAr
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export declare function toCommands(commands: string[], as?: string[]): {
+export declare function toCommands(commands: string[], options?: {
+    as: string[];
+    colors: string[];
+    delay: number[];
+    mute: boolean[];
+}): {
     command: string;
     args: string[];
     index: number;
     as: string;
+    color: string;
+    delay: number;
+    mute: boolean;
 }[];
 /**
  * Parses commands and destructures options into
@@ -63,7 +79,7 @@ export declare function stylizer(str: string, style: string | keyof StyleFunctio
  * @param value the value to ensure as array.
  * @param def the default value if undefined or null.
  */
-export declare function toArray(value: any, def?: any[]): any[];
+export declare function toArray<T = string>(value: any, def?: any[]): T[];
 export declare function changeCase(str: string, casing: Case, preTrim?: boolean): any;
 /**
  * Formats string matching template expression replacing with key values in object.

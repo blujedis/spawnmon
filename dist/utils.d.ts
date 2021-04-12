@@ -65,4 +65,4 @@ export declare function createError(err: string | (Error & Record<string, any>))
  * @param format the format to be used.
  * @param date the date to create timestamp for.
  */
-export declare function simpleTimestamp(date?: Date): string;
+export declare function simpleTimestamp(date?: Date, timeOnly?: boolean): string;

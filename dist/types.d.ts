@@ -4,6 +4,7 @@ import { SocketConstructorOpts } from 'net';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
 export declare type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close';
+export declare type PrefixKey = 'index' | 'pid' | 'command' | 'timestamp';
 export interface ITransformMetadata {
     command: string;
     from: EventSubscriptionType;

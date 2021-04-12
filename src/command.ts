@@ -31,12 +31,14 @@ export class Command {
   pinger: Pinger;
   subscriptions: Subscription[] = [];
   stdin: Writable;
+  prefixCache: string;
 
   options: ICommandOptions;
 
   constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command) {
 
     const { defaultColor, condensed } = spawnmon.options;
+
     options = {
       ...COMMAND_DEFAULTS,
       color: defaultColor,

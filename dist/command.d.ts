@@ -16,6 +16,7 @@ export declare class Command {
     pinger: Pinger;
     subscriptions: Subscription[];
     stdin: Writable;
+    prefixCache: string;
     options: ICommandOptions;
     constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command);
     /**

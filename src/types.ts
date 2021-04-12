@@ -1,13 +1,14 @@
 import { SpawnOptions, ProcessEnvOptions } from 'child_process';
-import { StylesType, StyleFunction } from 'ansi-colors';
 import { SocketConstructorOpts } from 'net';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
 
-// COMMAND
+// COMMAND & SPAWNMAN
 //----------------------------------------
 
 export type EventSubscriptionType = 'stdout' | 'stderr' | 'error' | 'close';
+
+export type PrefixKey = 'index' | 'pid' | 'command' | 'timestamp';
 
 export interface ITransformMetadata {
   command: string;

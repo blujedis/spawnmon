@@ -5,7 +5,10 @@ import { ICommandOptions, ISpawnmonOptions } from '../types';
 
 export type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
 
-const SPLIT_ARGS_EXP = /('(\\'|[^'])*'|"(\\"|[^"])*"|\/(\\\/|[^/])*\/|(\\ |[^ ])+|[\w-]+)/g;
+export type ToArrayType = string | boolean | number;
+
+const SPLIT_ARGS_EXP = /('.*?'|".*?"|\S+)/g;
+
 const CSV_EXP = /(\w,?)+/;
 
 const TEMPLATE_EXP = /\{.+?\}/g;
@@ -20,6 +23,8 @@ const helpers = {
   dot: v => changeCase(v, 'dot'),
   camel: v => changeCase(v, 'camel'),
 };
+
+
 
 /**
  * Gets preparred items for minimist.
@@ -64,6 +69,45 @@ export function toMinimistOptions(helpItems: HelpConfigs) {
 }
 
 /**
+ * Ensure a parsed argument is properly converted to an array
+ * from string removing {} chars.
+ * 
+ * @param args args that should be an array.
+ */
+export function argToArray<T = string>(args: string | string[], type: ToArrayType = 'string', delimiter = ',') {
+
+  // Not a fan of doing all this, change to different parser
+  // minimist is mini-miss a lot of things here, too much clean up!
+
+  if (typeof args === 'string') {
+    args = args.replace(/({|})/g, '');
+    args = args.split(',').map(v => v.trim());
+  }
+
+  let _args = toArray<any>(args);
+
+  if (type === 'boolean' || type === 'number') {
+    if (type === 'boolean') {
+      _args = _args.map(v => {
+        if (/^(true|1)$/.test(v))
+          return v === true || v === 'true' || v === '1' ? true : false;
+        return false;
+      });
+    }
+    else {
+      _args = _args.map(v => {
+        v = parseFloat(v);
+        if (isNaN(v))
+          return undefined;
+        return v;
+      });
+    }
+  }
+
+  return _args as T[];
+}
+
+/**
  * Removes unnecessary keys.
  * 
  * @param keys the keys to filter/remove.
@@ -102,11 +146,19 @@ export function toNormalized(parsed: ParsedArgs) {
   }
 
   // TODO: need to do some extra work in here
-  // for parsed types etc.
+  // for parsed types etc, too much work to use
+  // minimist will switch to more adv parser soon.
 
   // in this use case no need for '--' as all args props
   // not part of a command can only be consumed by Spawnmon.
   delete parsed['--'];
+
+  for (const k in parsed) {
+    if (k.includes('-')) {
+      parsed[changeCase(k, 'camel')] = parsed[k];
+      delete parsed[k];
+    }
+  }
 
   return parsed as Omit<ParsedArgs, '--'>;
 
@@ -118,22 +170,27 @@ export function toNormalized(parsed: ParsedArgs) {
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export function toCommands(commands: string[], as: string[] = []) {
+export function toCommands(commands: string[], options?: { as: string[], colors: string[], delay: number[], mute: boolean[] }) {
+
+  const { as, colors, delay, mute } = options;
 
   // iterate and build the commnds.
   return commands.map((v, index) => {
 
-    const args = v.split(SPLIT_ARGS_EXP);
+    const args = v.split(SPLIT_ARGS_EXP).filter(v => {
+      return v.length && v !== ' ';
+    });
+
     const command = args.shift();
-    
-    //const parsed = minimist([v]);
-    // console.log(parsed);
 
     return {
       command,
       args,
       index,
-      as: (as && as[index]) || command
+      as: (as && as[index]) || command,
+      color: colors[index],
+      delay: delay[index] as unknown as number,
+      mute: mute[index] as unknown as boolean
     };
 
   });
@@ -153,10 +210,16 @@ export function toConfig(parsed: ParsedArgs) {
   // Destructure out the commands from
   // Spawnmon flag options.
   // NOTE: labels an alias for "as".
-  const { _, as, labels, ...options } = normalized;
+  const { _, as, labels, colors, delay, mute, ...options } = normalized;
 
-  const commands = toCommands(_, as || labels) as ICommandOptions[];
+  const extended = {
+    as: argToArray(as || labels),
+    colors: argToArray(colors),
+    delay: argToArray<number>(delay, 'number'),
+    mute: argToArray<boolean>(mute, 'boolean'),
+  };
 
+  const commands = toCommands(_, extended) as ICommandOptions[];
 
   return {
     commands,
@@ -196,7 +259,7 @@ export function stylizer(str: string, style: string | keyof StyleFunction, ...st
  * @param value the value to ensure as array.
  * @param def the default value if undefined or null.
  */
-export function toArray(value: any, def = []) {
+export function toArray<T = string>(value: any, def = []): T[] {
   if (typeof value === 'undefined' || value === null)
     return def;
   if (Array.isArray(value))
@@ -237,10 +300,10 @@ export function changeCase(str: string, casing: Case, preTrim = true) {
     return preflight(str).join('.');
 
   if (casing === 'camel')
-    return preflight(str).map((s, i) => i > 0 ? capitalize(s) : s);
+    return preflight(str).map((s, i) => i > 0 ? capitalize(s) : s).join('');
 
   if (casing === 'title')
-    return preflight(str).map(s => capitalize(s));
+    return preflight(str).map(s => capitalize(s)).join('');
 
   return str;
 

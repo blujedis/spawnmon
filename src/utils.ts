@@ -26,6 +26,7 @@ export function chomp(line) {
  * @param styles the ansi color styles to be applied.
  */
 export function colorize(str: string, ...styles: Color[]) {
+  
   return styles.reduce((result, color) => {
     if (!colors[color])
       return result;
@@ -126,11 +127,13 @@ export function createError(err: string | (Error & Record<string, any>)) {
  * @param format the format to be used.
  * @param date the date to create timestamp for.
  */
-export function simpleTimestamp(date = new Date()) {
-  return date
+export function simpleTimestamp(date = new Date(), timeOnly = true) {
+  const segments = date
     .toISOString()
     .split('.')[0]              // remove offset too long.
-    .split('T')                 // split date and time.
-    .join(' ')                  // join using empty space.
+    .split('T');                // split date and time.
+  if (!timeOnly)
+    return segments[1];
+  return segments.join(' ')   // join using empty space.
     .replace(/-/g, '.');        // change - to . it's shorter.
 }
