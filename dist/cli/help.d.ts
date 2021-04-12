@@ -1,4 +1,6 @@
-export declare type HelpConfigs = typeof configs;
+export declare type HelpConfigs = Omit<typeof configs, 'templates'> & {
+    templates?: typeof configs.templates;
+};
 export declare type HelpKey = keyof HelpConfigs;
 export declare type HelpItem<K extends HelpKey> = HelpConfigs[K];
 export declare type Help = {
@@ -14,6 +16,7 @@ export interface IHelpItem {
     help: undefined | string | string[];
     type: string;
     group: HelpGroupKey;
+    default?: string | number | boolean | (string | number | boolean)[];
 }
 export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
     group: G;

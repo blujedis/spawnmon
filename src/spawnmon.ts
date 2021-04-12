@@ -14,7 +14,6 @@ const SPAWNMON_DEFAULTS: ISpawnmonOptions = {
   prefix: '[{index}]', // index, command, pid, timestamp
   prefixMax: 10,
   defaultColor: 'dim',
-  // prefixTemplate: '[{prefix}]',
   prefixAlign: 'left',
   prefixFill: '.',
   condensed: false,

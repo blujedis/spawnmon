@@ -37,7 +37,8 @@ const prefix = {
         `index, command, pid, timestamp`
     ],
     type: 'string',
-    group: 'prefix'
+    group: 'prefix',
+    default: '[{index}]'
 };
 const prefixFill = {
     name: `prefixFill`,
@@ -52,7 +53,8 @@ const prefixFill = {
         `Specify any single character to be used as "fill" when aligning prefixes.`
     ],
     type: 'string',
-    group: 'prefix'
+    group: 'prefix',
+    default: '.'
 };
 const prefixMax = {
     name: `prefixMax`,
@@ -65,7 +67,8 @@ const prefixMax = {
     isFlag: true,
     help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
     type: 'number',
-    group: 'prefix'
+    group: 'prefix',
+    default: 10
 };
 const prefixAlign = {
     name: `prefixAlign`,
@@ -89,7 +92,7 @@ const prefixAlign = {
 const labels = {
     name: `labels`,
     description: `User defined labels for commands.`,
-    alias: [`l`, `as`],
+    alias: [`l`],
     examples: [
         `{app} -labels [rup, cra] 'rollup -c -w' 'react-scripts start'`,
         `{app} -l [rup, cra] 'rollup -c -w' 'react-scripts start'`,
@@ -132,7 +135,8 @@ const defaultColor = {
         `The default color applies to all prefixes use '--colors' to apply custom colors to each command.`
     ],
     type: 'string',
-    group: 'styling'
+    group: 'styling',
+    default: 'dim'
 };
 const condensed = {
     name: `condensed`,
@@ -145,7 +149,8 @@ const condensed = {
     isFlag: true,
     help: `Depending on the module run some output multiple newlines which can make the terminal unnecessarily length. Condensed limits this as much as reasonable.`,
     type: 'boolean',
-    group: 'styling'
+    group: 'styling',
+    default: false
 };
 //////////////////////////////////////////////////
 // STREAMS & PROCESS 
@@ -161,7 +166,8 @@ const raw = {
     isFlag: true,
     help: `When using {app} programatically "transform" method is still called before writing.`,
     type: 'boolean',
-    group: 'process'
+    group: 'process',
+    default: false
 };
 const maxProcesses = {
     name: `maxProcess`,
@@ -174,7 +180,8 @@ const maxProcesses = {
     isFlag: true,
     help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`,
     type: 'number',
-    group: 'process'
+    group: 'process',
+    default: 5
 };
 const configs = {
     templates: {

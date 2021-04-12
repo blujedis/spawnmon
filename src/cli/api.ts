@@ -1,11 +1,14 @@
-import { ParsedArgs } from 'minimist';
+import minimist, { ParsedArgs } from 'minimist';
+import minimistOptions from 'minimist-options';
 import { Spawnmon } from '../spawnmon';
 import { readFileSync } from 'fs';
 import table from './table';
-import helpItems, { HelpGroupKey, HelpKey, IHelpItem, IHelpItemGrouped } from './help';
-import { changeCase, simpleFormatter, stylizer, toArray, toConfig, toFlag } from './utils';
+import helpItems, { HelpGroupKey, HelpKey, IHelpItem } from './help';
+import { changeCase, createError, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toMinimistOptions, unflag } from './utils';
 import { join } from 'path';
 import { StyleFunction } from 'ansi-colors';
+
+type PaddingKey = 'top' | 'bottom' | 'both' | 'none';
 
 const { name, ...pkg } =
   JSON.parse(readFileSync(join(__dirname, '../../package.json')).toString());
@@ -15,15 +18,20 @@ const DEFAULT_MAP = {
   ...pkg
 };
 
-const { templates } = helpItems;
+const { templates, ...rest } = helpItems;
 
-export function initApi(parsed: ParsedArgs) {
+// Simple api for managing commands.
 
+export function initApi(argv: any[]) {
+
+  let firstArg = unflag(argv[0] || '');
+  firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
+
+  const { aliases, options } = toMinimistOptions(rest);
+  const parsed = minimist(argv, minimistOptions(options));
   const config = toConfig(parsed);
-  const spawnmon = new Spawnmon({ ...config.options });
   const flags = Object.keys(config.options);
   const commands = Object.keys(config.commands);
-
   // Private Methods
 
   const formatItemProps = (conf: IHelpItem) => {
@@ -63,7 +71,6 @@ export function initApi(parsed: ParsedArgs) {
   const buildHelpItems = () => {
 
     const groups: HelpGroupKey[] = [];
-    const { templates, ...rest } = helpItems;
 
     const confs = Object.keys(rest).reduce((result, key) => {
 
@@ -85,17 +92,25 @@ export function initApi(parsed: ParsedArgs) {
 
   };
 
-  const getSectionHeader = (label: string, color?: keyof StyleFunction | string, padding: 'top' | 'bottom' | 'both' | 'none' = 'bottom', indent = '') => {
+  const padLine = (value: string | string[], padding: PaddingKey): string[] => {
+    let rows = [];
+    if (!Array.isArray(value))
+      value = [value];
+    if (padding === 'none')
+      return (value as string[]);
+    if (padding === 'both' || padding === 'top')
+      rows.push('');
+    rows = [...rows, ...value];
+    if (padding === 'both' || padding === 'bottom')
+      rows.push('');
+    return rows as string[];
+  };
+
+  const getSectionHeader = (label: string, color?: keyof StyleFunction | string, padding: PaddingKey = 'bottom', indent = '') => {
     label = indent + label;
     if (color)
       label = stylizer(label, color);
-    const rows = [
-      indent + label,
-    ];
-    if (padding === 'top' || padding === 'both')
-      rows.unshift('');
-    if (padding === 'bottom' || padding === 'both')
-      rows.push('');
+    const rows = padLine(indent + label, padding);
     return rows;
   };
 
@@ -114,11 +129,24 @@ export function initApi(parsed: ParsedArgs) {
     return lines;
   };
 
+  // Spawnmon has no commands so first arg must be
+  // either a flag option or start with a " or '
+  function isValidFirstArg(arg) {
+    return /^--?/.test(arg) || /^("|')/.test(arg);
+  }
+
+  // Public Methods
+
   const show = {
+
+    logo: (padding: PaddingKey = 'none') => {
+      const lines = padLine(' ' + templates.logo, padding);
+      return console.log(lines.join('\n'));
+    },
 
     header: (usage = true, padding?: boolean) => console.log(getHeader(usage, padding).join('\n')),
 
-    section: (label: string, color?: keyof StyleFunction | string, padding: 'top' | 'bottom' | 'both' | 'none' = 'bottom', indent = '') => console.log(getSectionHeader(label, color, padding, indent).join('\n')),
+    section: (label: string, color?: keyof StyleFunction | string, padding: PaddingKey = 'bottom', indent = '') => console.log(getSectionHeader(label, color, padding, indent).join('\n')),
 
     groups: (color?: keyof StyleFunction | string) => {
 
@@ -146,7 +174,7 @@ export function initApi(parsed: ParsedArgs) {
       const item = buildHelpItem(key);
       show.section(item.name + `:`, color, 'both');
       show.section(item.help.map(h => '  ' + h).join('\n'), 'dim');
-      show.section('examples:', 'yellow');
+      show.section('examples:', 'green');
       show.section(item.examples.map(ex => '  ' + ex).join('\n'));
       console.log();
     },
@@ -172,49 +200,81 @@ export function initApi(parsed: ParsedArgs) {
 
     },
 
-    pad: (count = 1) => console.log('\n'.repeat(count))
+    pad: (count = 1) => console.log('\n'.repeat(count)),
+
+    message: (msg: string, color?: string, padding: PaddingKey = 'both') => {
+      if (color)
+        msg = stylizer(msg, color);
+      const lines = padLine(msg, padding);
+      console.log(lines.join('\n'));
+    },
+
+    help: (key: string = firstArg) => {
+
+      // If no help key then 
+      if (!hasHelpArg(key)) {
+        show.header(true, false);
+        show.groups('blue');
+        console.log();
+        return;
+      }
+
+      show.logo('none');
+
+      if (key == 'examples')
+        show.examples('blue');
+
+      return show.item(key as HelpKey, 'blue');
+
+    }
 
   };
 
-  // Public Methods
-
   const hasFlag = (...flag: string[]) => {
-    return flags.some(v => flag.includes(v));
+    return flags.some(v => flag.includes(unflag(v)));
   };
 
   const hasCommand = (...command: string[]) => {
     return commands.some(v => command.includes(v));
   };
 
+  const hasFlags = () => !!Object.keys(flags).length;
+
+  const hasCommands = () => !!commands.length;
+
+  const hasHelp = () => {
+    return hasFlag('h', 'help');
+  };
+
+  const hasHelpArg = (key = firstArg) => {
+    return key && hasFlag(firstArg) && hasHelp();
+  };
+
   const run = () => {
+    const cleaned = filterOptions([...aliases, 'version'], config.options);
+    const spawnmon = new Spawnmon(cleaned);
     config.commands.forEach(opts => {
-      spawnmon.add(opts);
+      // console.log(opts);
+      const cmd = spawnmon.add(opts);
     });
   };
 
-  const showHelp = (key?: HelpKey | 'examples') => {
-
-    // If no help key then 
-    if (!key) {
-      show.header(true, false);
-      show.groups('blue');
-      return;
-    }
-
-    if (key !== 'examples')
-      show.item('prefix', 'blue');
-    else
-      show.examples('blue');
-
-  };
 
   return {
+    argv,
     config,
+    hasFlags,
+    hasCommands,
     hasCommand,
     hasFlag,
+    hasHelp,
+    hasHelpArg,
+    firstArg,
     run,
-    showHelp
+    show
   };
 
 }
+
+export default initApi(process.argv.slice(2));
 

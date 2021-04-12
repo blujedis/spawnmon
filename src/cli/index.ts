@@ -1,12 +1,24 @@
-import minimist, { ParsedArgs } from 'minimist';
+
 import { Spawnmon } from '../spawnmon';
-import { initApi } from './api';
+import cli from './api';
 
-const cli = initApi(minimist(process.argv.slice(2)));
+function init() {
 
-cli.showHelp();
+  if (cli.hasHelp())
+    return cli.show.help();
 
-// if (cli.hasFlag('h', 'help'))
-//   return cli.showHelp();
+  if (!cli.hasCommands() && cli.hasFlag(cli.firstArg)) {
+    cli.show.logo('both');
+    cli.show.message(`No spawn commands present, did you mean to run:`, null, 'bottom');
+    return cli.show.message(`spawnmon ${cli.argv[0]} -h?`, 'yellow', 'bottom');
+  }
+
+  // If we get here, time to run something.
+  cli.run();
+
+}
+
+init();
+
 
 

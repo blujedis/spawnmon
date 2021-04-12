@@ -1,13 +1,32 @@
-import { ParsedArgs } from 'minimist';
+import minimist, { ParsedArgs } from 'minimist';
 import { StyleFunction } from 'ansi-colors';
+import { HelpConfigs } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
 export declare type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
+/**
+ * Gets preparred items for minimist.
+ *
+ * @param helpItems help configuration items.
+ */
+export declare function toMinimistOptions(helpItems: HelpConfigs): {
+    aliases: any[];
+    options: {};
+};
+/**
+ * Removes unnecessary keys.
+ *
+ * @param keys the keys to filter/remove.
+ * @param options the object to be filtered.
+ */
+export declare function filterOptions(keys: string[], options: Record<string, any>): {
+    [x: string]: any;
+};
 /**
  * Normalizes, bascially some clean up after minimist parses arguments.
  *
  * @param parsed the parsed arguments.
  */
-export declare function toNormalized(parsed: ParsedArgs): Omit<ParsedArgs, "--">;
+export declare function toNormalized(parsed: ParsedArgs): Omit<minimist.ParsedArgs, "--">;
 /**
  * Builds commands into configuration for Spawnmon.
  *
@@ -72,3 +91,10 @@ export declare function toFlag(value: string): string;
  * @param values the values to convert to flags.
  */
 export declare function toFlag(...values: string[]): string[];
+/**
+ * Removes either -- or - from value.
+ *
+ * @param value the value to unflag
+ */
+export declare function unflag(value: string): string;
+export declare function createError(errOrMessage: string | Error): Error;

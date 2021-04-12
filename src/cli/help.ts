@@ -4,7 +4,7 @@ import { join } from 'path';
 
 const logo = readFileSync(join(__dirname, './logo.txt')).toString().trim();
 
-export type HelpConfigs = typeof configs;
+export type HelpConfigs = Omit<typeof configs, 'templates'> & { templates?: typeof configs.templates };
 export type HelpKey = keyof HelpConfigs;
 export type HelpItem<K extends HelpKey> = HelpConfigs[K];
 export type Help = { [K in HelpKey]: HelpConfigs[K] };
@@ -19,6 +19,7 @@ export interface IHelpItem {
   help: undefined | string | string[];
   type: string;
   group: HelpGroupKey;
+  default?: string | number | boolean | (string | number | boolean)[]
 }
 
 export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
@@ -62,7 +63,8 @@ const prefix: IHelpItem = {
     `index, command, pid, timestamp`
   ],
   type: 'string',
-  group: 'prefix'
+  group: 'prefix',
+  default: '[{index}]'
 };
 
 const prefixFill: IHelpItem = {
@@ -78,7 +80,8 @@ const prefixFill: IHelpItem = {
     `Specify any single character to be used as "fill" when aligning prefixes.`
   ],
   type: 'string',
-  group: 'prefix'
+  group: 'prefix',
+  default: '.'
 };
 
 const prefixMax: IHelpItem = {
@@ -92,7 +95,8 @@ const prefixMax: IHelpItem = {
   isFlag: true,
   help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
   type: 'number',
-  group: 'prefix'
+  group: 'prefix',
+  default: 10
 };
 
 const prefixAlign: IHelpItem = {
@@ -118,7 +122,7 @@ const prefixAlign: IHelpItem = {
 const labels: IHelpItem = {
   name: `labels`,
   description: `User defined labels for commands.`,
-  alias: [`l`, `as`],
+  alias: [`l`],
   examples: [
     `{app} -labels [rup, cra] 'rollup -c -w' 'react-scripts start'`,
     `{app} -l [rup, cra] 'rollup -c -w' 'react-scripts start'`,
@@ -164,7 +168,8 @@ const defaultColor: IHelpItem = {
     `The default color applies to all prefixes use '--colors' to apply custom colors to each command.`
   ],
   type: 'string',
-  group: 'styling'
+  group: 'styling',
+  default: 'dim'
 };
 
 const condensed: IHelpItem = {
@@ -178,7 +183,8 @@ const condensed: IHelpItem = {
   isFlag: true,
   help: `Depending on the module run some output multiple newlines which can make the terminal unnecessarily length. Condensed limits this as much as reasonable.`,
   type: 'boolean',
-  group: 'styling'
+  group: 'styling',
+  default: false
 
 };
 
@@ -197,7 +203,8 @@ const raw: IHelpItem = {
   isFlag: true,
   help: `When using {app} programatically "transform" method is still called before writing.`,
   type: 'boolean',
-  group: 'process'
+  group: 'process',
+  default: false
 };
 
 const maxProcesses: IHelpItem = {
@@ -211,7 +218,8 @@ const maxProcesses: IHelpItem = {
   isFlag: true,
   help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`,
   type: 'number',
-  group: 'process'
+  group: 'process',
+  default: 5
 };
 
 const configs = {

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.toConfig = exports.toCommands = exports.toNormalized = void 0;
+exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.toConfig = exports.toCommands = exports.toNormalized = exports.filterOptions = exports.toMinimistOptions = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const SPLIT_ARGS_EXP = /('(\\'|[^'])*'|"(\\"|[^"])*"|\/(\\\/|[^/])*\/|(\\ |[^ ])+|[\w-]+)/g;
 const CSV_EXP = /(\w,?)+/;
@@ -19,6 +19,56 @@ const helpers = {
     camel: v => changeCase(v, 'camel'),
 };
 /**
+ * Gets preparred items for minimist.
+ *
+ * @param helpItems help configuration items.
+ */
+function toMinimistOptions(helpItems) {
+    // save shorthand aliases so we can 
+    // strip them later of options object.
+    let aliases = [];
+    const options = Object.keys(helpItems).reduce((confs, key) => {
+        const conf = helpItems[key];
+        let type = conf.type;
+        const isArray = type.startsWith('[');
+        type = type.replace(/(\[|\])/g, '');
+        type = isArray ? type + '-array' : type;
+        const alias = toArray(conf.alias);
+        aliases = [...aliases, ...alias];
+        confs[key] = {
+            type,
+            alias: conf.alias
+        };
+        if (typeof conf.default !== 'undefined')
+            confs[key].default = conf.default;
+        return confs;
+    }, {});
+    return {
+        aliases,
+        options
+    };
+}
+exports.toMinimistOptions = toMinimistOptions;
+/**
+ * Removes unnecessary keys.
+ *
+ * @param keys the keys to filter/remove.
+ * @param options the object to be filtered.
+ */
+function filterOptions(keys, options) {
+    const cleaned = {
+        ...options
+    };
+    // remove shorthand aliases.
+    // and other keys not
+    // needed by Spawnmon instance.
+    keys.forEach(k => {
+        delete cleaned[k];
+    });
+    return cleaned;
+}
+exports.filterOptions = filterOptions;
+/**
  * Normalizes, bascially some clean up after minimist parses arguments.
  *
  * @param parsed the parsed arguments.
@@ -31,6 +81,8 @@ function toNormalized(parsed) {
             .split(',')
             .map(v => v.trim());
     }
+    // TODO: need to do some extra work in here
+    // for parsed types etc.
     // in this use case no need for '--' as all args props
     // not part of a command can only be consumed by Spawnmon.
     delete parsed['--'];
@@ -48,6 +100,8 @@ function toCommands(commands, as = []) {
     return commands.map((v, index) => {
         const args = v.split(SPLIT_ARGS_EXP);
         const command = args.shift();
+        //const parsed = minimist([v]);
+        // console.log(parsed);
         return {
             command,
             args,
@@ -176,4 +230,23 @@ function toFlag(...values) {
     return values;
 }
 exports.toFlag = toFlag;
+/**
+ * Removes either -- or - from value.
+ *
+ * @param value the value to unflag
+ */
+function unflag(value) {
+    if (typeof value === 'undefined')
+        return;
+    return value.replace(/^--?/, '');
+}
+exports.unflag = unflag;
+function createError(errOrMessage) {
+    let err = errOrMessage;
+    if (typeof errOrMessage === 'string')
+        err = new Error(errOrMessage);
+    err.message = stylizer(err.message, 'red');
+    return err;
+}
+exports.createError = createError;
 //# sourceMappingURL=utils.js.map

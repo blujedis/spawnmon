@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initApi = void 0;
+const minimist_1 = __importDefault(require("minimist"));
+const minimist_options_1 = __importDefault(require("minimist-options"));
 const spawnmon_1 = require("../spawnmon");
 const fs_1 = require("fs");
 const table_1 = __importDefault(require("./table"));
@@ -15,10 +17,14 @@ const DEFAULT_MAP = {
     app: name,
     ...pkg
 };
-const { templates } = help_1.default;
-function initApi(parsed) {
+const { templates, ...rest } = help_1.default;
+// Simple api for managing commands.
+function initApi(argv) {
+    let firstArg = utils_1.unflag(argv[0] || '');
+    firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
+    const { aliases, options } = utils_1.toMinimistOptions(rest);
+    const parsed = minimist_1.default(argv, minimist_options_1.default(options));
     const config = utils_1.toConfig(parsed);
-    const spawnmon = new spawnmon_1.Spawnmon({ ...config.options });
     const flags = Object.keys(config.options);
     const commands = Object.keys(config.commands);
     // Private Methods
@@ -49,7 +55,6 @@ function initApi(parsed) {
     };
     const buildHelpItems = () => {
         const groups = [];
-        const { templates, ...rest } = help_1.default;
         const confs = Object.keys(rest).reduce((result, key) => {
             const conf = buildHelpItem(key);
             if (!groups.includes(conf.group))
@@ -61,17 +66,24 @@ function initApi(parsed) {
         }, {});
         return [groups, confs];
     };
+    const padLine = (value, padding) => {
+        let rows = [];
+        if (!Array.isArray(value))
+            value = [value];
+        if (padding === 'none')
+            return value;
+        if (padding === 'both' || padding === 'top')
+            rows.push('');
+        rows = [...rows, ...value];
+        if (padding === 'both' || padding === 'bottom')
+            rows.push('');
+        return rows;
+    };
     const getSectionHeader = (label, color, padding = 'bottom', indent = '') => {
         label = indent + label;
         if (color)
             label = utils_1.stylizer(label, color);
-        const rows = [
-            indent + label,
-        ];
-        if (padding === 'top' || padding === 'both')
-            rows.unshift('');
-        if (padding === 'bottom' || padding === 'both')
-            rows.push('');
+        const rows = padLine(indent + label, padding);
         return rows;
     };
     const getHeader = (usage = true, padding) => {
@@ -88,7 +100,17 @@ function initApi(parsed) {
         }
         return lines;
     };
+    // Spawnmon has no commands so first arg must be
+    // either a flag option or start with a " or '
+    function isValidFirstArg(arg) {
+        return /^--?/.test(arg) || /^("|')/.test(arg);
+    }
+    // Public Methods
     const show = {
+        logo: (padding = 'none') => {
+            const lines = padLine(' ' + templates.logo, padding);
+            return console.log(lines.join('\n'));
+        },
         header: (usage = true, padding) => console.log(getHeader(usage, padding).join('\n')),
         section: (label, color, padding = 'bottom', indent = '') => console.log(getSectionHeader(label, color, padding, indent).join('\n')),
         groups: (color) => {
@@ -113,7 +135,7 @@ function initApi(parsed) {
             const item = buildHelpItem(key);
             show.section(item.name + `:`, color, 'both');
             show.section(item.help.map(h => '  ' + h).join('\n'), 'dim');
-            show.section('examples:', 'yellow');
+            show.section('examples:', 'green');
             show.section(item.examples.map(ex => '  ' + ex).join('\n'));
             console.log();
         },
@@ -133,39 +155,63 @@ function initApi(parsed) {
                 console.log(rows.join('\n') + '\n');
             });
         },
-        pad: (count = 1) => console.log('\n'.repeat(count))
+        pad: (count = 1) => console.log('\n'.repeat(count)),
+        message: (msg, color, padding = 'both') => {
+            if (color)
+                msg = utils_1.stylizer(msg, color);
+            const lines = padLine(msg, padding);
+            console.log(lines.join('\n'));
+        },
+        help: (key = firstArg) => {
+            // If no help key then 
+            if (!hasHelpArg(key)) {
+                show.header(true, false);
+                show.groups('blue');
+                console.log();
+                return;
+            }
+            show.logo('none');
+            if (key == 'examples')
+                show.examples('blue');
+            return show.item(key, 'blue');
+        }
     };
-    // Public Methods
     const hasFlag = (...flag) => {
-        return flags.some(v => flag.includes(v));
+        return flags.some(v => flag.includes(utils_1.unflag(v)));
     };
     const hasCommand = (...command) => {
         return commands.some(v => command.includes(v));
     };
+    const hasFlags = () => !!Object.keys(flags).length;
+    const hasCommands = () => !!commands.length;
+    const hasHelp = () => {
+        return hasFlag('h', 'help');
+    };
+    const hasHelpArg = (key = firstArg) => {
+        return key && hasFlag(firstArg) && hasHelp();
+    };
     const run = () => {
+        const cleaned = utils_1.filterOptions([...aliases, 'version'], config.options);
+        const spawnmon = new spawnmon_1.Spawnmon(cleaned);
         config.commands.forEach(opts => {
-            spawnmon.add(opts);
+            // console.log(opts);
+            const cmd = spawnmon.add(opts);
         });
     };
-    const showHelp = (key) => {
-        // If no help key then 
-        if (!key) {
-            show.header(true, false);
-            show.groups('blue');
-            return;
-        }
-        if (key !== 'examples')
-            show.item('prefix', 'blue');
-        else
-            show.examples('blue');
-    };
     return {
+        argv,
         config,
+        hasFlags,
+        hasCommands,
         hasCommand,
         hasFlag,
+        hasHelp,
+        hasHelpArg,
+        firstArg,
         run,
-        showHelp
+        show
     };
 }
 exports.initApi = initApi;
+exports.default = initApi(process.argv.slice(2));
 //# sourceMappingURL=api.js.map

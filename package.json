@@ -42,6 +42,7 @@
     "cross-spawn": "^7.0.3",
     "log-symbols": "^4.1.0",
     "minimist": "^1.2.5",
+    "minimist-options": "^4.1.0",
     "rimraf": "^3.0.2",
     "rxjs": "^6.6.7",
     "string-length": "^4.0.2",

@@ -1,5 +1,6 @@
-import { ParsedArgs } from 'minimist';
+import minimist, { ParsedArgs } from 'minimist';
 import ansiColors, { StyleFunction } from 'ansi-colors';
+import { HelpConfigs } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
 
 export type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
@@ -21,6 +22,71 @@ const helpers = {
 };
 
 /**
+ * Gets preparred items for minimist.
+ * 
+ * @param helpItems help configuration items.
+ */
+export function toMinimistOptions(helpItems: HelpConfigs) {
+
+  // save shorthand aliases so we can 
+  // strip them later of options object.
+  let aliases = [];
+
+  const options = Object.keys(helpItems).reduce((confs, key) => {
+
+    const conf = helpItems[key];
+    let type = conf.type;
+    const isArray = type.startsWith('[');
+
+    type = type.replace(/(\[|\])/g, '');
+    type = isArray ? type + '-array' : type;
+
+    const alias = toArray(conf.alias);
+    aliases = [...aliases, ...alias];
+
+    confs[key] = {
+      type,
+      alias: conf.alias
+    } as any;
+
+    if (typeof conf.default !== 'undefined')
+      confs[key].default = conf.default;
+
+    return confs;
+
+  }, {});
+
+  return {
+    aliases,
+    options
+  };
+
+}
+
+/**
+ * Removes unnecessary keys.
+ * 
+ * @param keys the keys to filter/remove.
+ * @param options the object to be filtered.
+ */
+export function filterOptions(keys: string[], options: Record<string, any>) {
+
+  const cleaned = {
+    ...options
+  };
+
+  // remove shorthand aliases.
+  // and other keys not
+  // needed by Spawnmon instance.
+  keys.forEach(k => {
+    delete cleaned[k];
+  });
+
+  return cleaned;
+
+}
+
+/**
  * Normalizes, bascially some clean up after minimist parses arguments.
  * 
  * @param parsed the parsed arguments.
@@ -34,6 +100,9 @@ export function toNormalized(parsed: ParsedArgs) {
       .split(',')
       .map(v => v.trim());
   }
+
+  // TODO: need to do some extra work in here
+  // for parsed types etc.
 
   // in this use case no need for '--' as all args props
   // not part of a command can only be consumed by Spawnmon.
@@ -56,6 +125,9 @@ export function toCommands(commands: string[], as: string[] = []) {
 
     const args = v.split(SPLIT_ARGS_EXP);
     const command = args.shift();
+    
+    //const parsed = minimist([v]);
+    // console.log(parsed);
 
     return {
       command,
@@ -84,6 +156,7 @@ export function toConfig(parsed: ParsedArgs) {
   const { _, as, labels, ...options } = normalized;
 
   const commands = toCommands(_, as || labels) as ICommandOptions[];
+
 
   return {
     commands,
@@ -239,4 +312,22 @@ export function toFlag(...values: string[]) {
   if (values.length === 1)
     return values.shift();
   return values;
+}
+
+/**
+ * Removes either -- or - from value.
+ * 
+ * @param value the value to unflag
+ */
+export function unflag(value: string) {
+  if (typeof value === 'undefined') return;
+  return value.replace(/^--?/, '');
+}
+
+export function createError(errOrMessage: string | Error) {
+  let err = errOrMessage as Error;
+  if (typeof errOrMessage === 'string')
+    err = new Error(errOrMessage);
+  err.message = stylizer(err.message, 'red');
+  return err;
 }
