@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.toConfig = exports.toCommands = exports.toNormalized = exports.filterOptions = exports.argToArray = exports.toMinimistOptions = void 0;
+exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toNormalized = exports.argToArray = exports.toYargsOptions = exports.toMinimistOptions = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const SPLIT_ARGS_EXP = /('.*?'|".*?"|\S+)/g;
 const CSV_EXP = /(\w,?)+/;
@@ -50,6 +50,59 @@ function toMinimistOptions(helpItems) {
 }
 exports.toMinimistOptions = toMinimistOptions;
 /**
+ * Converts help config objects to Yargs Parser config objects.
+ *
+ * @param helpItems the configuration object to be converted.
+ */
+function toYargsOptions(helpItems, configuration = {}) {
+    const { templates, ...clean } = helpItems;
+    const boolean = [];
+    const number = [];
+    const array = [];
+    const string = [];
+    const defaults = {};
+    const alias = {};
+    const coerce = {};
+    let aliases = [];
+    for (const k in clean) {
+        const conf = clean[k];
+        const isArray = conf.type.startsWith('[');
+        const type = isArray ? conf.type.replace(/(\[|\])/g, '') : conf.type;
+        if (isArray)
+            array.push({ key: k, [type]: true });
+        else if (type === 'number')
+            number.push(k);
+        else if (type === 'boolean')
+            boolean.push(k);
+        else
+            string.push(k);
+        if (conf.default)
+            defaults[k] = conf.default;
+        if (conf.alias) {
+            const arr = toArray(conf.alias);
+            aliases = [...aliases, ...arr];
+            alias[k] = arr;
+        }
+        if (k === 'onIdle')
+            coerce[k] = (str) => str.split(':');
+    }
+    const options = {
+        string,
+        boolean,
+        number,
+        array,
+        default: defaults,
+        alias,
+        coerce,
+        configuration
+    };
+    return {
+        options,
+        aliases
+    };
+}
+exports.toYargsOptions = toYargsOptions;
+/**
  * Ensure a parsed argument is properly converted to an array
  * from string removing {} chars.
  *
@@ -83,25 +136,6 @@ function argToArray(args, type = 'string', delimiter = ',') {
     return _args;
 }
 exports.argToArray = argToArray;
-/**
- * Removes unnecessary keys.
- *
- * @param keys the keys to filter/remove.
- * @param options the object to be filtered.
- */
-function filterOptions(keys, options) {
-    const cleaned = {
-        ...options
-    };
-    // remove shorthand aliases.
-    // and other keys not
-    // needed by Spawnmon instance.
-    keys.forEach(k => {
-        delete cleaned[k];
-    });
-    return cleaned;
-}
-exports.filterOptions = filterOptions;
 /**
  * Normalizes, bascially some clean up after minimist parses arguments.
  *
@@ -163,11 +197,9 @@ exports.toCommands = toCommands;
  * @param parsed the minimist parsed arguments.
  */
 function toConfig(parsed) {
-    const normalized = toNormalized(parsed);
-    // Destructure out the commands from
-    // Spawnmon flag options.
-    // NOTE: labels an alias for "as".
-    const { _, as, labels, colors, delay, mute, onIdle, ...options } = normalized;
+    const { _, as, labels, colors, delay, mute, onIdle, version, ...options } = parsed;
+    console.log(parsed);
+    process.exit();
     const extended = {
         as: argToArray(as || labels),
         colors: argToArray(colors),
@@ -182,6 +214,25 @@ function toConfig(parsed) {
     };
 }
 exports.toConfig = toConfig;
+/**
+ * Removes unnecessary keys.
+ *
+ * @param keys the keys to filter/remove.
+ * @param options the object to be filtered.
+ */
+function filterOptions(keys, options) {
+    const cleaned = {
+        ...options
+    };
+    // remove shorthand aliases.
+    // and other keys not
+    // needed by Spawnmon instance.
+    keys.forEach(k => {
+        delete cleaned[k];
+    });
+    return cleaned;
+}
+exports.filterOptions = filterOptions;
 /**
  * Colorizes a string.
  *

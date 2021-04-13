@@ -1,6 +1,7 @@
 import minimist, { ParsedArgs } from 'minimist';
+import { Arguments, Configuration } from 'yargs-parser';
 import ansiColors, { StyleFunction } from 'ansi-colors';
-import { HelpConfigs } from './help';
+import { HelpConfigs, IHelpItem } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
 
 export type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
@@ -25,140 +26,77 @@ const helpers = {
 };
 
 /**
- * Gets preparred items for minimist.
+ * Converts help config objects to Yargs Parser config objects.
  * 
- * @param helpItems help configuration items.
+ * @param helpItems the configuration object to be converted.
  */
-export function toMinimistOptions(helpItems: HelpConfigs) {
+export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Configuration> = {}) {
 
-  // save shorthand aliases so we can 
-  // strip them later of options object.
+  const { templates, ...clean } = helpItems;
+
+  const boolean = [];
+  const number = [];
+  const array = [];
+  const string = [];
+  const defaults = {} as any;
+  const alias = {} as any;
+  const coerce = {} as any;
   let aliases = [];
 
-  const options = Object.keys(helpItems).reduce((confs, key) => {
+  for (const k in clean) {
 
-    const conf = helpItems[key];
-    let type = conf.type;
-    const isArray = type.startsWith('[');
+    const conf = clean[k] as IHelpItem;
+    const isArray = conf.type.startsWith('[');
+    const type = isArray ? conf.type.replace(/(\[|\])/g, '') : conf.type;
 
-    type = type.replace(/(\[|\])/g, '');
-    type = isArray ? type + '-array' : type;
+    if (isArray)
+      array.push({ key: k, [type]: true });
+    else if (type === 'number')
+      number.push(k);
+    else if (type === 'boolean')
+      boolean.push(k);
+    else
+      string.push(k);
 
-    const alias = toArray(conf.alias);
-    aliases = [...aliases, ...alias];
+    if (conf.default)
+      defaults[k] = conf.default;
 
-    confs[key] = {
-      type,
-      alias: conf.alias
-    } as any;
+    if (conf.alias) {
+      const arr = toArray(conf.alias);
+      aliases = [...aliases, ...arr];
+      alias[k] = arr;
 
-    if (typeof conf.default !== 'undefined')
-      confs[key].default = conf.default;
+    }
 
-    return confs;
+    if (k === 'onIdle')
+      coerce[k] = (str) => {
+        console.log('idle string', str);
+        if (!~str.indexOf(':'))
+          throw new Error(`Option "onIdle" has invalid value, format is "source:target". You may also include the interval for source e.g. "source:target:1800".`);
+        const segments = str.split(':');
+        if (typeof segments[2] !== 'undefined')
+          segments[2] = parseFloat(segments[2]);
+        if (typeof segments[3] !== 'undefined')
+          segments[3] = parseFloat(segments[3]);
+      };
 
-  }, {});
+  }
+
+  const options = {
+    string,
+    boolean,
+    number,
+    array,
+    default: defaults,
+    alias,
+    coerce,
+    configuration
+  };
 
   return {
-    aliases,
-    options
+    options,
+    aliases
   };
-
-}
-
-/**
- * Ensure a parsed argument is properly converted to an array
- * from string removing {} chars.
- * 
- * @param args args that should be an array.
- */
-export function argToArray<T = string>(args: string | string[], type: ToArrayType = 'string', delimiter = ',') {
-
-  // Not a fan of doing all this, change to different parser
-  // minimist is mini-miss a lot of things here, too much clean up!
-
-  if (typeof args === 'string') {
-    args = args.replace(/({|})/g, '');
-    args = args.split(',').map(v => v.trim());
-  }
-
-  let _args = toArray<any>(args);
-
-  if (type === 'boolean' || type === 'number') {
-    if (type === 'boolean') {
-      _args = _args.map(v => {
-        if (/^(true|1)$/.test(v))
-          return v === true || v === 'true' || v === '1' ? true : false;
-        return false;
-      });
-    }
-    else {
-      _args = _args.map(v => {
-        v = parseFloat(v);
-        if (isNaN(v))
-          return undefined;
-        return v;
-      });
-    }
-  }
-
-  return _args as T[];
-}
-
-/**
- * Removes unnecessary keys.
- * 
- * @param keys the keys to filter/remove.
- * @param options the object to be filtered.
- */
-export function filterOptions(keys: string[], options: Record<string, any>) {
-
-  const cleaned = {
-    ...options
-  };
-
-  // remove shorthand aliases.
-  // and other keys not
-  // needed by Spawnmon instance.
-  keys.forEach(k => {
-    delete cleaned[k];
-  });
-
-  return cleaned;
-
-}
-
-/**
- * Normalizes, bascially some clean up after minimist parses arguments.
- * 
- * @param parsed the parsed arguments.
- */
-export function toNormalized(parsed: ParsedArgs) {
-
-  // Is comma separated value, split to array.
-  if (typeof parsed.as === 'string' && CSV_EXP.test(parsed.as)) {
-    parsed.as = parsed.as
-      .replace(/[[\]{}]/g, '')
-      .split(',')
-      .map(v => v.trim());
-  }
-
-  // TODO: need to do some extra work in here
-  // for parsed types etc, too much work to use
-  // minimist will switch to more adv parser soon.
-
-  // in this use case no need for '--' as all args props
-  // not part of a command can only be consumed by Spawnmon.
-  delete parsed['--'];
-
-  for (const k in parsed) {
-    if (k.includes('-')) {
-      parsed[changeCase(k, 'camel')] = parsed[k];
-      delete parsed[k];
-    }
-  }
-
-  return parsed as Omit<ParsedArgs, '--'>;
 
 }
 
@@ -201,21 +139,19 @@ export function toCommands(commands: string[], options?: { as: string[], colors:
  * 
  * @param parsed the minimist parsed arguments.
  */
-export function toConfig(parsed: ParsedArgs) {
+export function toConfig(parsed: Arguments) {
 
-  const normalized = toNormalized(parsed);
+  const { _, as, labels, colors, delay, mute, onIdle, version, ...options } = parsed;
 
-  // Destructure out the commands from
-  // Spawnmon flag options.
-  // NOTE: labels an alias for "as".
-  const { _, as, labels, colors, delay, mute, onIdle, ...options } = normalized;
+  console.log(parsed);
+  process.exit();
 
   const extended = {
-    as: argToArray(as || labels),
-    colors: argToArray(colors),
-    delay: argToArray<number>(delay, 'number'),
-    mute: argToArray<boolean>(mute, 'boolean'),
-    onIdle: argToArray<string>(onIdle, 'string')
+    as: as || labels,
+    colors,
+    delay,
+    mute,
+    onIdle
   };
 
   const commands = toCommands(_, extended) as ICommandOptions[];
@@ -224,6 +160,29 @@ export function toConfig(parsed: ParsedArgs) {
     commands,
     options: options as ISpawnmonOptions
   };
+
+}
+
+/**
+ * Removes unnecessary keys.
+ * 
+ * @param keys the keys to filter/remove.
+ * @param options the object to be filtered.
+ */
+export function filterOptions(keys: string[], options: Record<string, any>) {
+
+  const cleaned = {
+    ...options
+  };
+
+  // remove shorthand aliases.
+  // and other keys not
+  // needed by Spawnmon instance.
+  keys.forEach(k => {
+    delete cleaned[k];
+  });
+
+  return cleaned;
 
 }
 

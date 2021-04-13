@@ -169,7 +169,7 @@ const delay = {
 const mute = {
     name: `raw`,
     description: `Mutes the output of a given spawned process.`,
-    alias: `d`,
+    alias: `u`,
     examples: [
         `{app} --mute {true} 'rollup -c -w'`,
         `{app} -u {0,true} 'rollup -c -w' 'react-scripts start'`

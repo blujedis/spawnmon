@@ -1,4 +1,5 @@
 import minimist, { ParsedArgs } from 'minimist';
+import { Arguments, Configuration } from 'yargs-parser';
 import { StyleFunction } from 'ansi-colors';
 import { HelpConfigs } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
@@ -14,21 +15,30 @@ export declare function toMinimistOptions(helpItems: HelpConfigs): {
     options: {};
 };
 /**
+ * Converts help config objects to Yargs Parser config objects.
+ *
+ * @param helpItems the configuration object to be converted.
+ */
+export declare function toYargsOptions(helpItems: HelpConfigs, configuration?: Partial<Configuration>): {
+    options: {
+        string: any[];
+        boolean: any[];
+        number: any[];
+        array: any[];
+        default: any;
+        alias: any;
+        coerce: any;
+        configuration: Partial<Configuration>;
+    };
+    aliases: any[];
+};
+/**
  * Ensure a parsed argument is properly converted to an array
  * from string removing {} chars.
  *
  * @param args args that should be an array.
  */
 export declare function argToArray<T = string>(args: string | string[], type?: ToArrayType, delimiter?: string): T[];
-/**
- * Removes unnecessary keys.
- *
- * @param keys the keys to filter/remove.
- * @param options the object to be filtered.
- */
-export declare function filterOptions(keys: string[], options: Record<string, any>): {
-    [x: string]: any;
-};
 /**
  * Normalizes, bascially some clean up after minimist parses arguments.
  *
@@ -61,9 +71,18 @@ export declare function toCommands(commands: string[], options?: {
  *
  * @param parsed the minimist parsed arguments.
  */
-export declare function toConfig(parsed: ParsedArgs): {
+export declare function toConfig(parsed: Arguments): {
     commands: ICommandOptions[];
     options: ISpawnmonOptions;
+};
+/**
+ * Removes unnecessary keys.
+ *
+ * @param keys the keys to filter/remove.
+ * @param options the object to be filtered.
+ */
+export declare function filterOptions(keys: string[], options: Record<string, any>): {
+    [x: string]: any;
 };
 /**
  * Colorizes a string.

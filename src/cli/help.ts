@@ -122,11 +122,11 @@ const prefixAlign: IHelpItem = {
 const labels: IHelpItem = {
   name: `labels`,
   description: `User defined labels for commands.`,
-  alias: [`l`],
+  alias: [`l`, 'as'],
   examples: [
-    `{app} --labels {rup,cra} 'rollup -c -w' 'react-scripts start'`,
-    `{app} -l {rup,cra} 'rollup -c -w' 'react-scripts start'`,
-    `{app} --labels={rup,cra} 'rollup -c -w' 'react-scripts start'`
+    `{app} --labels rup cra 'rollup -c -w' 'react-scripts start'`,
+    `{app} -l rup cra 'rollup -c -w' 'react-scripts start'`,
+    `{app} --labels=rup,cra 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
   help: `Display the current version for {app}.`,
@@ -139,9 +139,9 @@ const colors: IHelpItem = {
   description: `Specify prefix color by name or index.`,
   alias: 'c',
   examples: [
-    `{app} --colors {yellow,cyan} 'rollup -c -w' 'react-scripts start'`,
-    `{app} -c {yellow,cyan} 'rollup -c -w' 'react-scripts start'`,
-    `{app} --colors={yellow,cyan} 'rollup -c -w' 'react-scripts start'`
+    `{app} --colors yellow cyan 'rollup -c -w' 'react-scripts start'`,
+    `{app} -c yellow cyan 'rollup -c -w' 'react-scripts start'`,
+    `{app} --colors=yellow,cyan 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
   help: `Display the current version for {app}.`,
@@ -195,8 +195,8 @@ const delay: IHelpItem = {
   description: `Delays the start of the command.`,
   alias: `d`,
   examples: [
-    `{app} --delay {500} 'rollup -c -w'`,
-    `{app} -d {0,1200} 'rollup -c -w' 'react-scripts start'`
+    `{app} --delay 500 'rollup -c -w'`,
+    `{app} -d 0 1200 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
   help: `When using {app} you can delay the start of individual scripts. There are various reasons why you might want to do this. One might be to make logs easier to read since spawn processes fire off at once.`,
@@ -208,10 +208,10 @@ const delay: IHelpItem = {
 const mute: IHelpItem = {
   name: `raw`,
   description: `Mutes the output of a given spawned process.`,
-  alias: `d`,
+  alias: `u`,
   examples: [
-    `{app} --mute {true} 'rollup -c -w'`,
-    `{app} -u {0,true} 'rollup -c -w' 'react-scripts start'`
+    `{app} --mute true 'rollup -c -w'`,
+    `{app} -u 0 true 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
   help: `Specifying mute for a command/process will silence the output of that command's output.`,
@@ -240,9 +240,9 @@ const onIdle: IHelpItem = {
   description: `Maps process to run on idle of previous process.`,
   alias: `o`,
   examples: [
-    `{app} --on-idle {rollup:echo} 'rollup -c -w' 'echo on rollup idle'`,
-    `{app} -o {rollup:echo} 'rollup -c -w' 'echo on rollup idle'`,
-    `{app} -o {rollup:echo:2500} 'rollup -c -w' 'echo on rollup idle'`
+    `{app} --on-idle rollup:echo 'rollup -c -w' 'echo on rollup idle'`,
+    `{app} -o rollup:echo 'rollup -c -w' 'echo on rollup idle'`,
+    `{app} -o rollup:echo:2500 'rollup -c -w' 'echo on rollup idle'`
   ],
   isFlag: true,
   help: `On idle simply looks for stale output streams of the spawned command. Each output to the terminal updates the timer. If the interval is exceeded and the update counter is the same as the previous, the on condition event is emitted calling listeners. Not perfect but works well out of the box with default settings.`,

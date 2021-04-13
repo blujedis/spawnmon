@@ -4,8 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initApi = void 0;
-const minimist_1 = __importDefault(require("minimist"));
-const minimist_options_1 = __importDefault(require("minimist-options"));
+const yargs_parser_1 = __importDefault(require("yargs-parser"));
 const spawnmon_1 = require("../spawnmon");
 const fs_1 = require("fs");
 const table_1 = __importDefault(require("./table"));
@@ -22,8 +21,14 @@ const { templates, ...rest } = help_1.default;
 function initApi(argv) {
     let firstArg = utils_1.unflag(argv[0] || '');
     firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
-    const { aliases, options } = utils_1.toMinimistOptions(rest);
-    const parsed = minimist_1.default(argv, minimist_options_1.default(options));
+    // const { aliases, options } = toMinimistOptions(rest);
+    // const parsed = minimist(argv, minimistOptions(options));
+    const yargsConfig = {
+        'strip-dashed': true
+    };
+    const { aliases, options } = utils_1.toYargsOptions(help_1.default, yargsConfig);
+    console.log(options);
+    const parsed = yargs_parser_1.default(argv, options);
     const config = utils_1.toConfig(parsed);
     const flags = Object.keys(config.options);
     const commands = Object.keys(config.commands);
@@ -191,7 +196,6 @@ function initApi(argv) {
     };
     const run = () => {
         const cleaned = utils_1.filterOptions([...aliases, 'version'], config.options);
-        console.log(cleaned);
         const spawnmon = new spawnmon_1.Spawnmon(cleaned);
         config.commands.forEach(opts => spawnmon.add(opts));
         spawnmon.run();

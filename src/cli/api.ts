@@ -1,10 +1,11 @@
 import minimist, { ParsedArgs } from 'minimist';
 import minimistOptions from 'minimist-options';
+import yargsParser from 'yargs-parser';
 import { Spawnmon } from '../spawnmon';
 import { readFileSync } from 'fs';
 import table from './table';
 import helpItems, { HelpGroupKey, HelpKey, IHelpItem } from './help';
-import { changeCase, createError, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toMinimistOptions, unflag } from './utils';
+import { changeCase, createError, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toMinimistOptions, toYargsOptions, unflag } from './utils';
 import { join } from 'path';
 import { StyleFunction } from 'ansi-colors';
 
@@ -27,8 +28,14 @@ export function initApi(argv: any[]) {
   let firstArg = unflag(argv[0] || '');
   firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
 
-  const { aliases, options } = toMinimistOptions(rest);
-  const parsed = minimist(argv, minimistOptions(options));
+  // const { aliases, options } = toMinimistOptions(rest);
+  // const parsed = minimist(argv, minimistOptions(options));
+  const yargsConfig = {
+    'strip-dashed': true
+  };
+  const { aliases, options } = toYargsOptions(helpItems, yargsConfig);
+
+  const parsed = yargsParser(argv, options);
   const config = toConfig(parsed);
   const flags = Object.keys(config.options);
   const commands = Object.keys(config.commands);
@@ -252,7 +259,6 @@ export function initApi(argv: any[]) {
 
   const run = () => {
     const cleaned = filterOptions([...aliases, 'version'], config.options);
-    console.log(cleaned)
     const spawnmon = new Spawnmon(cleaned);
     config.commands.forEach(opts => spawnmon.add(opts));
     spawnmon.run();

@@ -48,7 +48,8 @@
     "string-length": "^4.0.2",
     "strip-ansi": "^6.0.0",
     "supports-color": "^8.1.1",
-    "tree-kill": "^1.2.2"
+    "tree-kill": "^1.2.2",
+    "yargs-parser": "^20.2.7"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^18.0.0",
@@ -58,6 +59,7 @@
     "@types/node": "^12.0.0",
     "@types/supports-color": "^8.1.0",
     "@types/wrap-ansi": "^3.0.0",
+    "@types/yargs-parser": "^20.2.0",
     "@typescript-eslint/eslint-plugin": "^4.21.0",
     "@typescript-eslint/parser": "^4.21.0",
     "eslint": "^7.15.0",
