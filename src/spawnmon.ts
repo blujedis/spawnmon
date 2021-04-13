@@ -393,7 +393,7 @@ export class Spawnmon {
    */
   assign(group: string, commands: Command[], merge?: boolean): this;
 
-  assign(group: string, commands: string | Command | (string | Command)[], merge = false) {
+  assign(group: string, commands: string | Command | (string | Command)[], merge = true) {
 
     if (typeof commands === 'string' || commands instanceof Command)
       commands = [commands];
@@ -747,7 +747,7 @@ export class Spawnmon {
   run(group?: string | Command, ...commands: (string | Command)[]) {
 
     // If first arg is not a group assume command.
-    if (group instanceof Command || !this.groups.has(group)) {
+    if (group instanceof Command || (group && !this.groups.has(group))) {
       commands.unshift(group);
       group = undefined;
     }
@@ -762,9 +762,9 @@ export class Spawnmon {
     this.setMaxPrefix(cmds);
 
     // Run each command.
-    cmds.forEach(cmd => cmd.run());
+    //cmds.forEach(cmd => cmd.run());
 
-    this.running = cmds;
+    //this.running = cmds;
 
   }
 

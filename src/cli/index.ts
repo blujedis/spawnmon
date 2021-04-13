@@ -13,7 +13,7 @@ function init() {
     return cli.show.message(`spawnmon ${cli.argv[0]} -h?`, 'yellow', 'bottom');
   }
 
-  // If we get here, time to run something.
+  // If we get here, time to run commands.
   cli.run();
 
 }

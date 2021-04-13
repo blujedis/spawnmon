@@ -81,7 +81,7 @@ export function initApi(argv: any[]) {
 
       result[conf.group] = result[conf.group] || {};
       result[conf.group][conf.name] = conf;
-      // [...result[conf.group], conf.row];
+
       return result;
 
     }, {});
@@ -252,10 +252,9 @@ export function initApi(argv: any[]) {
 
   const run = () => {
     const cleaned = filterOptions([...aliases, 'version'], config.options);
+    console.log(cleaned)
     const spawnmon = new Spawnmon(cleaned);
-    config.commands.forEach(opts => {
-      spawnmon.add(opts);
-    });
+    config.commands.forEach(opts => spawnmon.add(opts));
     spawnmon.run();
   };
 

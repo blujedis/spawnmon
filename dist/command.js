@@ -200,9 +200,9 @@ class Command {
         });
         return this;
     }
-    onPinged(command) {
+    onPinged() {
     }
-    onIdle(command) {
+    onIdle() {
     }
     /**
      * Adds command to a group(s).

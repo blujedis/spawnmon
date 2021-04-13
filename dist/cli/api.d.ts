@@ -46,7 +46,7 @@ declare const _default: {
         header: (usage?: boolean, padding?: boolean) => void;
         section: (label: string, color?: string, padding?: PaddingKey, indent?: string) => void;
         groups: (color?: string) => void;
-        item: (key: "templates" | "raw" | "maxProcesses" | "prefixAlign" | "defaultColor" | "condensed" | "prefix" | "prefixFill" | "prefixMax" | "labels" | "version" | "colors" | "delay" | "mute", color?: string) => void;
+        item: (key: "templates" | "raw" | "maxProcesses" | "prefixAlign" | "defaultColor" | "condensed" | "prefix" | "prefixFill" | "prefixMax" | "labels" | "version" | "colors" | "delay" | "mute" | "onIdle", color?: string) => void;
         examples: (color?: string) => void;
         pad: (count?: number) => void;
         message: (msg: string, color?: string, padding?: PaddingKey) => void;

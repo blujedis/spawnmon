@@ -87,8 +87,8 @@ export declare class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
-    onPinged(command: string | Command): void;
-    onIdle(command: string | Command): void;
+    onPinged(): void;
+    onIdle(): void;
     /**
      * Adds command to a group(s).
      *

@@ -266,7 +266,7 @@ class Spawnmon {
             this.commands.set(cmd.name, cmd);
         return this;
     }
-    assign(group, commands, merge = false) {
+    assign(group, commands, merge = true) {
         if (typeof commands === 'string' || commands instanceof command_1.Command)
             commands = [commands];
         commands = commands.map(cmd => this.get(cmd).name);
@@ -357,7 +357,7 @@ class Spawnmon {
     }
     run(group, ...commands) {
         // If first arg is not a group assume command.
-        if (group instanceof command_1.Command || !this.groups.has(group)) {
+        if (group instanceof command_1.Command || (group && !this.groups.has(group))) {
             commands.unshift(group);
             group = undefined;
         }
@@ -367,8 +367,8 @@ class Spawnmon {
         const cmds = commands.map(cmd => this.get(cmd));
         this.setMaxPrefix(cmds);
         // Run each command.
-        cmds.forEach(cmd => cmd.run());
-        this.running = cmds;
+        //cmds.forEach(cmd => cmd.run());
+        //this.running = cmds;
     }
     kill(...commands) {
         const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.running];

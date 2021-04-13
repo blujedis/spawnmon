@@ -39,5 +39,6 @@ declare const configs: {
     colors: IHelpItem;
     delay: IHelpItem;
     mute: IHelpItem;
+    onIdle: IHelpItem;
 };
 export default configs;

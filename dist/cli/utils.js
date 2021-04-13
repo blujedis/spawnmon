@@ -167,12 +167,13 @@ function toConfig(parsed) {
     // Destructure out the commands from
     // Spawnmon flag options.
     // NOTE: labels an alias for "as".
-    const { _, as, labels, colors, delay, mute, ...options } = normalized;
+    const { _, as, labels, colors, delay, mute, onIdle, ...options } = normalized;
     const extended = {
         as: argToArray(as || labels),
         colors: argToArray(colors),
         delay: argToArray(delay, 'number'),
         mute: argToArray(mute, 'boolean'),
+        onIdle: argToArray(onIdle, 'string')
     };
     const commands = toCommands(_, extended);
     return {

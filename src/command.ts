@@ -249,11 +249,11 @@ export class Command {
     return this;
   }
 
-  onPinged(command: string | Command) {
+  onPinged() {
 
   }
 
-  onIdle(command: string | Command) {
+  onIdle() {
 
   }
 

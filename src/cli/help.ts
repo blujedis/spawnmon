@@ -235,6 +235,21 @@ const raw: IHelpItem = {
   default: false
 };
 
+const onIdle: IHelpItem = {
+  name: `onIdle`,
+  description: `Maps process to run on idle of previous process.`,
+  alias: `o`,
+  examples: [
+    `{app} --on-idle {rollup:echo} 'rollup -c -w' 'echo on rollup idle'`,
+    `{app} -o {rollup:echo} 'rollup -c -w' 'echo on rollup idle'`,
+    `{app} -o {rollup:echo:2500} 'rollup -c -w' 'echo on rollup idle'`
+  ],
+  isFlag: true,
+  help: `On idle simply looks for stale output streams of the spawned command. Each output to the terminal updates the timer. If the interval is exceeded and the update counter is the same as the previous, the on condition event is emitted calling listeners. Not perfect but works well out of the box with default settings.`,
+  type: '[string]',
+  group: 'process'
+};
+
 const maxProcesses: IHelpItem = {
   name: `maxProcess`,
   description: `Specify the max number of processes.`,
@@ -267,7 +282,8 @@ const configs = {
   version,
   colors,
   delay,
-  mute
+  mute,
+  onIdle
 };
 
 export default configs;

@@ -12,7 +12,7 @@ function init() {
         api_1.default.show.message(`No spawn commands present, did you mean to run:`, null, 'bottom');
         return api_1.default.show.message(`spawnmon ${api_1.default.argv[0]} -h?`, 'yellow', 'bottom');
     }
-    // If we get here, time to run something.
+    // If we get here, time to run commands.
     api_1.default.run();
 }
 init();

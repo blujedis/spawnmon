@@ -24,8 +24,6 @@ const helpers = {
   camel: v => changeCase(v, 'camel'),
 };
 
-
-
 /**
  * Gets preparred items for minimist.
  * 
@@ -210,13 +208,14 @@ export function toConfig(parsed: ParsedArgs) {
   // Destructure out the commands from
   // Spawnmon flag options.
   // NOTE: labels an alias for "as".
-  const { _, as, labels, colors, delay, mute, ...options } = normalized;
+  const { _, as, labels, colors, delay, mute, onIdle, ...options } = normalized;
 
   const extended = {
     as: argToArray(as || labels),
     colors: argToArray(colors),
     delay: argToArray<number>(delay, 'number'),
     mute: argToArray<boolean>(mute, 'boolean'),
+    onIdle: argToArray<string>(onIdle, 'string')
   };
 
   const commands = toCommands(_, extended) as ICommandOptions[];
