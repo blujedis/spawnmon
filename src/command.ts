@@ -6,10 +6,10 @@ import { ChildProcess, SpawnOptions } from 'child_process';
 import { Readable, Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import treekill from 'tree-kill';
-import { colorize, } from './utils';
+import { colorize, createError, } from './utils';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-import { EventSubscriptionType, ICommandOptions, ITransformMetadata, SimpleTimerHandler, TransformHandler } from './types';
+import { EventSubscriptionType, ICommandOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 
 const COMMAND_DEFAULTS: ICommandOptions = {
   command: '',
@@ -21,17 +21,20 @@ const COMMAND_DEFAULTS: ICommandOptions = {
 export class Command {
 
   private delayTimeoutId: NodeJS.Timeout;
+  private timerHandlers = [] as SimpleTimerHandler[];
+  private pingerHandlers = [] as PingerHandler[];
 
   spawnmon: Spawnmon;
   parent: Command;
   process: ChildProcess;
   spawnmonChild: Spawnmon;
 
-  timer: SimpleTimer;
-  pinger: Pinger;
   subscriptions: Subscription[] = [];
   stdin: Writable;
   prefixCache: string;
+
+  timer: SimpleTimer;
+  pinger: Pinger;
 
   options: ICommandOptions;
 
@@ -168,6 +171,23 @@ export class Command {
   }
 
   /**
+   * Some preflight we can't init until right before we run.
+   */
+  private beforeRun() {
+
+    const { pinger, timer } = this.options;
+
+    // If pinger contains a target command bind it.
+    if (pinger && typeof pinger === 'object' && pinger.target)
+      this.onPinger(pinger.target);
+
+    // If timer contains a target command bind it.
+    if (timer && typeof timer === 'object' && timer.target)
+      this.onTimer(timer.target);
+
+  }
+
+  /**
    * Gets the process id if active.
    */
   get pid() {
@@ -243,17 +263,49 @@ export class Command {
    * Unsubscribes from all subscriptions.
    */
   unsubscribe() {
+
     this.subscriptions.forEach(sub => {
       sub && !sub.closed && sub.unsubscribe();
     });
+
+    this.timerHandlers.forEach(handler => {
+      if (this.timer)
+        this.timer.off('condition', handler);
+    });
+
+    this.pingerHandlers.forEach(handler => {
+      if (this.pinger)
+        this.pinger.off('connected', handler);
+    });
+
     return this;
   }
 
-  onPinged() {
-
+  onPinger(handler: string | Command | PingerHandler) {
+    let _handler = handler as PingerHandler;
+    if (typeof handler === 'string' || handler instanceof Command) {
+      const cmd = this.spawnmon.get(handler);
+      if (!cmd)
+        throw createError(`Failed to create Pinger handler using unknown command.`);
+      _handler = (update, counters) => {
+        cmd.run();
+      };
+    }
+    this.pinger.on('connected', _handler);
   }
 
-  onIdle() {
+  onTimer(handler: string | Command | SimpleTimerHandler) {
+    let _handler = handler as SimpleTimerHandler;
+    if (typeof handler === 'string' || handler instanceof Command) {
+      const cmd = this.spawnmon.get(handler);
+      if (!cmd)
+        throw createError(`Failed to create Timer handler using unknown command.`);
+      _handler = (update, counters) => {
+        cmd.run();
+      };
+    }
+    this.timer.on('condition', _handler);
+    this.timer.enable();
 
   }
 
@@ -340,12 +392,19 @@ export class Command {
    * @param transform optional tranform, handy when calling programatically.
    */
   run(transform?: TransformHandler) {
+
+    this.beforeRun();
+
     if (this.options.mute)
       this.log(colorize(`command ${this.name} is muted.`, 'yellow'), false, false);
+
     if (!this.options.delay)
       return this.spawnCommand(transform);
+
     this.delayTimeoutId = setTimeout(() => this.spawnCommand(transform), this.options.delay);
+
     return this;
+
   }
 
   /**

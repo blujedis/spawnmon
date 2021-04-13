@@ -1,5 +1,5 @@
-import minimist, { ParsedArgs } from 'minimist';
-import { Arguments, Configuration } from 'yargs-parser';
+
+import yargsParser, { Arguments, Configuration } from 'yargs-parser';
 import ansiColors, { StyleFunction } from 'ansi-colors';
 import { HelpConfigs, IHelpItem } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
@@ -8,9 +8,14 @@ export type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot
 
 export type ToArrayType = string | boolean | number;
 
-const SPLIT_ARGS_EXP = /('.*?'|".*?"|\S+)/g;
-
-const CSV_EXP = /(\w,?)+/;
+export interface IParseCommandOptions {
+  as: string[];
+  colors: string[];
+  delay: number[];
+  mute: string[];
+  onTimer: { name: string, target: string, interval?: number }[];
+  onPinger: { name: string, target: string, host?: string, port?: number }[];
+}
 
 const TEMPLATE_EXP = /\{.+?\}/g;
 
@@ -65,20 +70,10 @@ export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Co
       const arr = toArray(conf.alias);
       aliases = [...aliases, ...arr];
       alias[k] = arr;
-
     }
 
-    if (k === 'onIdle')
-      coerce[k] = (str) => {
-        console.log('idle string', str);
-        if (!~str.indexOf(':'))
-          throw new Error(`Option "onIdle" has invalid value, format is "source:target". You may also include the interval for source e.g. "source:target:1800".`);
-        const segments = str.split(':');
-        if (typeof segments[2] !== 'undefined')
-          segments[2] = parseFloat(segments[2]);
-        if (typeof segments[3] !== 'undefined')
-          segments[3] = parseFloat(segments[3]);
-      };
+    if (conf.coerce)
+      coerce[k] = conf.coerce;
 
   }
 
@@ -93,6 +88,8 @@ export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Co
     configuration
   };
 
+
+
   return {
     options,
     aliases
@@ -106,30 +103,51 @@ export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Co
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export function toCommands(commands: string[], options?: { as: string[], colors: string[], delay: number[], mute: boolean[] }) {
+export function toCommands(commands: string[], options?: IParseCommandOptions) {
 
-  const { as, colors, delay, mute } = options;
+  const { as, colors, delay, mute, onTimer, onPinger } = options;
 
-  // iterate and build the commnds.
-  return commands.map((v, index) => {
+  // Store array of child commands meaning
+  // they depend on a command that calls them
+  // after ping or timer expires.
+  const children = [];
 
-    const args = v.split(SPLIT_ARGS_EXP).filter(v => {
-      return v.length && v !== ' ';
-    });
+  const getIndexed = (cmd, arr = []) => arr.filter(c => {
+    return c.name === cmd;
+  })[0] || [];
 
-    const command = args.shift();
+  const _commands = commands.map((v, index) => {
+
+    const args = yargsParser(v)._;
+    const command = args.shift() as string;
+    const _mute = typeof toArray(mute)[index] === 'string' ? true : false;
+    const timer = getIndexed(command, onTimer);
+    const pinger = getIndexed(command, onPinger);
+    const name = ((as && as[index]) || command) as string;
+
+    if (timer.target)
+      children.unshift(timer.target);
+
+    if (pinger.target)
+      children.unshift(pinger.target);
 
     return {
       command,
       args,
-      index,
-      as: (as && as[index]) || command,
-      color: colors[index],
-      delay: delay[index] as unknown as number,
-      mute: mute[index] as unknown as boolean
+      as: name,
+      color: toArray(colors)[index],
+      delay: toArray<number>(delay)[index],
+      mute: _mute,
+      timer,
+      pinger
     };
 
   });
+
+  return {
+    commands: _commands,
+    children: children
+  };
 
 }
 
@@ -141,24 +159,27 @@ export function toCommands(commands: string[], options?: { as: string[], colors:
  */
 export function toConfig(parsed: Arguments) {
 
-  const { _, as, labels, colors, delay, mute, onIdle, version, ...options } = parsed;
-
-  console.log(parsed);
-  process.exit();
+  const {
+    _, as, labels, colors, delay, mute, onTimer,
+    version, onPinger,
+    ...options
+  } = parsed;
 
   const extended = {
     as: as || labels,
     colors,
     delay,
     mute,
-    onIdle
+    onTimer,
+    onPinger
   };
 
-  const commands = toCommands(_, extended) as ICommandOptions[];
+  const { commands, children } = toCommands(_, extended) as { children: string[], commands: ICommandOptions[] };
 
   return {
     commands,
-    options: options as ISpawnmonOptions
+    children,
+    options: options as ISpawnmonOptions,
   };
 
 }

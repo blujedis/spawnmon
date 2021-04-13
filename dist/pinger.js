@@ -59,14 +59,14 @@ class Pinger extends events_1.EventEmitter {
     get port() {
         return this.options.port;
     }
-    activate() {
+    enable() {
         this.options.active = true;
     }
-    inactivate() {
+    disable() {
         this.options.active = false;
     }
     start(onConnected) {
-        if (!this.activate)
+        if (!this.enable)
             return this;
         if (this.socket)
             return this;

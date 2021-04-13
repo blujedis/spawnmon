@@ -50,10 +50,10 @@ class SimpleTimer extends events_1.default {
             elasped: this.endTime - this.startTime
         };
     }
-    activate() {
+    enable() {
         this.options.active = true;
     }
-    inactivate() {
+    disable() {
         this.options.active = false;
     }
     update(data) {

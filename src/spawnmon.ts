@@ -28,7 +28,6 @@ export class Spawnmon {
   private prevChar;
 
   running: Command[]; // the running commands.
-  indexes: string[] = [];
   maxPrefix = 0; // updated before run.
   commands = new Map<string, Command>();
   groups = new Map<string, string[]>();
@@ -762,9 +761,9 @@ export class Spawnmon {
     this.setMaxPrefix(cmds);
 
     // Run each command.
-    //cmds.forEach(cmd => cmd.run());
+    cmds.forEach(cmd => cmd.run());
 
-    //this.running = cmds;
+    this.running = cmds;
 
   }
 

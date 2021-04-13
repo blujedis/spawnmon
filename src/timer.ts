@@ -65,11 +65,11 @@ export class SimpleTimer extends EventEmitter {
     };
   }
 
-  activate() {
+  enable() {
     this.options.active = true;
   }
 
-  inactivate() {
+  disable() {
     this.options.active = false;
   }
 

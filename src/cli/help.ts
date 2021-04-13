@@ -19,12 +19,27 @@ export interface IHelpItem {
   help: undefined | string | string[];
   type: string;
   group: HelpGroupKey;
-  default?: string | number | boolean | (string | number | boolean)[]
+  default?: string | number | boolean | (string | number | boolean)[];
+  coerce?: (...args: any[]) => any;
 }
 
 export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
   group: G
 }
+
+// Simple helper to coerce arrays to the correct type.
+const coerceToArray = (delim = ',', transform?: (arr: any[]) => any[]) => (arr) => {
+  return arr.reduce((a, c) => {
+    c = typeof c === 'string'
+      ? c.split(delim).map(v => v.trim())
+      : c;
+    c = !Array.isArray(c) ? [c] : c;
+    a = [...a, c];
+    if (!transform)
+      return a;
+    return transform(a);
+  }, []);
+};
 
 //////////////////////////////////////////////////
 // MISC 
@@ -124,14 +139,15 @@ const labels: IHelpItem = {
   description: `User defined labels for commands.`,
   alias: [`l`, 'as'],
   examples: [
-    `{app} --labels rup cra 'rollup -c -w' 'react-scripts start'`,
-    `{app} -l rup cra 'rollup -c -w' 'react-scripts start'`,
+    `{app} --labels rup,cra 'rollup -c -w' 'react-scripts start'`,
+    `{app} -l rup,cra 'rollup -c -w' 'react-scripts start'`,
     `{app} --labels=rup,cra 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
   help: `Display the current version for {app}.`,
   type: '[string]',
-  group: 'prefix'
+  group: 'prefix',
+  coerce: coerceToArray()
 };
 
 const colors: IHelpItem = {
@@ -139,14 +155,15 @@ const colors: IHelpItem = {
   description: `Specify prefix color by name or index.`,
   alias: 'c',
   examples: [
-    `{app} --colors yellow cyan 'rollup -c -w' 'react-scripts start'`,
-    `{app} -c yellow cyan 'rollup -c -w' 'react-scripts start'`,
+    `{app} --colors yellow,cyan 'rollup -c -w' 'react-scripts start'`,
+    `{app} -c yellow,cyan 'rollup -c -w' 'react-scripts start'`,
     `{app} --colors=yellow,cyan 'rollup -c -w' 'react-scripts start'`
   ],
   isFlag: true,
   help: `Display the current version for {app}.`,
   type: '[string]',
-  group: 'prefix'
+  group: 'prefix',
+  coerce: coerceToArray()
 };
 
 //////////////////////////////////////////////////////////
@@ -200,25 +217,28 @@ const delay: IHelpItem = {
   ],
   isFlag: true,
   help: `When using {app} you can delay the start of individual scripts. There are various reasons why you might want to do this. One might be to make logs easier to read since spawn processes fire off at once.`,
-  type: '[number]',
-  group: 'process'
+  type: '[string]',
+  group: 'process',
+  coerce: coerceToArray(',', (arr) => {
+    return arr.map(v => parseFloat(v));
+  })
 };
-
 
 const mute: IHelpItem = {
   name: `raw`,
   description: `Mutes the output of a given spawned process.`,
   alias: `u`,
   examples: [
-    `{app} --mute true 'rollup -c -w'`,
-    `{app} -u 0 true 'rollup -c -w' 'react-scripts start'`
+    `{app} --mute rollup 'rollup -c -w'`,
+    `{app} -u=rollup,react-scripts 'rollup -c -w' 'react-scripts start'`,
+    `{app} -u=rollup -u=react-scripts 'rollup -c -w' 'react-scripts start'`,
   ],
   isFlag: true,
   help: `Specifying mute for a command/process will silence the output of that command's output.`,
-  type: '[boolean]',
-  group: 'process'
+  type: '[string]',
+  group: 'process',
+  coerce: coerceToArray(',')
 };
-
 
 const raw: IHelpItem = {
   name: `raw`,
@@ -235,19 +255,58 @@ const raw: IHelpItem = {
   default: false
 };
 
-const onIdle: IHelpItem = {
-  name: `onIdle`,
-  description: `Maps process to run on idle of previous process.`,
+const onTimer: IHelpItem = {
+  name: `onTimer`,
+  description: `Maps process to run on timer idle for process.`,
   alias: `o`,
   examples: [
-    `{app} --on-idle rollup:echo 'rollup -c -w' 'echo on rollup idle'`,
-    `{app} -o rollup:echo 'rollup -c -w' 'echo on rollup idle'`,
-    `{app} -o rollup:echo:2500 'rollup -c -w' 'echo on rollup idle'`
+    `{app} --on-timer rollup:echo 'rollup -c -w' 'echo "rollup idle"'`,
+    `{app} -o rollup:echo 'rollup -c -w' 'echo "rollup idle"'`,
+    `{app} -o rollup:echo:2500 'rollup -c -w' 'echo "rollup idle"'`
   ],
   isFlag: true,
-  help: `On idle simply looks for stale output streams of the spawned command. Each output to the terminal updates the timer. If the interval is exceeded and the update counter is the same as the previous, the on condition event is emitted calling listeners. Not perfect but works well out of the box with default settings.`,
+  help: `On timer waits for a steam to become stale, essentially stops outputting to terminal, then runs the specified command. Accepts source command, target and interval to run timer in form of: source:target:2500`,
   type: '[string]',
-  group: 'process'
+  group: 'process',
+  coerce: coerceToArray(':', (arr) => {
+    arr = arr.map(tuple => {
+      if (typeof tuple[2] !== 'undefined')
+        tuple[2] = parseInt(tuple[2], 10);
+      return {
+        name: tuple[0],
+        target: tuple[1],
+        interval: tuple[2]
+      };
+    });
+    return arr;
+  })
+};
+
+const onPinger: IHelpItem = {
+  name: `onPinger`,
+  description: `Enables running command after ping successfully connects.`,
+  alias: `g`,
+  examples: [
+    `{app} --on-pinged react-scripts:electron 'react-scripts start' 'electron .'`,
+    `{app} -g react-scripts:electron:10 'react-scripts start'`
+  ],
+  isFlag: true,
+  help: `The on pinged flag creates a socket and pings the host/port until aborted or connected. If the socket connects it auto closes and then launches the next command, Accepts source, target, host and port in form of: source:target:127.0.0.1:3000.`,
+  type: '[string]',
+  group: 'process',
+  coerce: coerceToArray(':', (arr) => {
+    arr = arr.map(tuple => {
+      if (typeof tuple[3] !== 'undefined')
+        tuple[3] = parseInt(tuple[3], 10);
+      return {
+        name: tuple[0],
+        target: tuple[1],
+        host: tuple[2],
+        port: tuple[3]
+      };
+    });
+    return arr;
+  })
 };
 
 const maxProcesses: IHelpItem = {
@@ -283,7 +342,8 @@ const configs = {
   colors,
   delay,
   mute,
-  onIdle
+  onTimer,
+  onPinger,
 };
 
 export default configs;

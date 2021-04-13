@@ -3,10 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toNormalized = exports.argToArray = exports.toYargsOptions = exports.toMinimistOptions = void 0;
+exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toYargsOptions = void 0;
+const yargs_parser_1 = __importDefault(require("yargs-parser"));
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
-const SPLIT_ARGS_EXP = /('.*?'|".*?"|\S+)/g;
-const CSV_EXP = /(\w,?)+/;
 const TEMPLATE_EXP = /\{.+?\}/g;
 const helpers = {
     upper: v => changeCase(v, 'upper'),
@@ -18,37 +17,6 @@ const helpers = {
     dot: v => changeCase(v, 'dot'),
     camel: v => changeCase(v, 'camel'),
 };
-/**
- * Gets preparred items for minimist.
- *
- * @param helpItems help configuration items.
- */
-function toMinimistOptions(helpItems) {
-    // save shorthand aliases so we can 
-    // strip them later of options object.
-    let aliases = [];
-    const options = Object.keys(helpItems).reduce((confs, key) => {
-        const conf = helpItems[key];
-        let type = conf.type;
-        const isArray = type.startsWith('[');
-        type = type.replace(/(\[|\])/g, '');
-        type = isArray ? type + '-array' : type;
-        const alias = toArray(conf.alias);
-        aliases = [...aliases, ...alias];
-        confs[key] = {
-            type,
-            alias: conf.alias
-        };
-        if (typeof conf.default !== 'undefined')
-            confs[key].default = conf.default;
-        return confs;
-    }, {});
-    return {
-        aliases,
-        options
-    };
-}
-exports.toMinimistOptions = toMinimistOptions;
 /**
  * Converts help config objects to Yargs Parser config objects.
  *
@@ -83,8 +51,8 @@ function toYargsOptions(helpItems, configuration = {}) {
             aliases = [...aliases, ...arr];
             alias[k] = arr;
         }
-        if (k === 'onIdle')
-            coerce[k] = (str) => str.split(':');
+        if (conf.coerce)
+            coerce[k] = conf.coerce;
     }
     const options = {
         string,
@@ -103,91 +71,46 @@ function toYargsOptions(helpItems, configuration = {}) {
 }
 exports.toYargsOptions = toYargsOptions;
 /**
- * Ensure a parsed argument is properly converted to an array
- * from string removing {} chars.
- *
- * @param args args that should be an array.
- */
-function argToArray(args, type = 'string', delimiter = ',') {
-    // Not a fan of doing all this, change to different parser
-    // minimist is mini-miss a lot of things here, too much clean up!
-    if (typeof args === 'string') {
-        args = args.replace(/({|})/g, '');
-        args = args.split(',').map(v => v.trim());
-    }
-    let _args = toArray(args);
-    if (type === 'boolean' || type === 'number') {
-        if (type === 'boolean') {
-            _args = _args.map(v => {
-                if (/^(true|1)$/.test(v))
-                    return v === true || v === 'true' || v === '1' ? true : false;
-                return false;
-            });
-        }
-        else {
-            _args = _args.map(v => {
-                v = parseFloat(v);
-                if (isNaN(v))
-                    return undefined;
-                return v;
-            });
-        }
-    }
-    return _args;
-}
-exports.argToArray = argToArray;
-/**
- * Normalizes, bascially some clean up after minimist parses arguments.
- *
- * @param parsed the parsed arguments.
- */
-function toNormalized(parsed) {
-    // Is comma separated value, split to array.
-    if (typeof parsed.as === 'string' && CSV_EXP.test(parsed.as)) {
-        parsed.as = parsed.as
-            .replace(/[[\]{}]/g, '')
-            .split(',')
-            .map(v => v.trim());
-    }
-    // TODO: need to do some extra work in here
-    // for parsed types etc, too much work to use
-    // minimist will switch to more adv parser soon.
-    // in this use case no need for '--' as all args props
-    // not part of a command can only be consumed by Spawnmon.
-    delete parsed['--'];
-    for (const k in parsed) {
-        if (k.includes('-')) {
-            parsed[changeCase(k, 'camel')] = parsed[k];
-            delete parsed[k];
-        }
-    }
-    return parsed;
-}
-exports.toNormalized = toNormalized;
-/**
  * Builds commands into configuration for Spawnmon.
  *
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
 function toCommands(commands, options) {
-    const { as, colors, delay, mute } = options;
-    // iterate and build the commnds.
-    return commands.map((v, index) => {
-        const args = v.split(SPLIT_ARGS_EXP).filter(v => {
-            return v.length && v !== ' ';
-        });
+    const { as, colors, delay, mute, onTimer, onPinger } = options;
+    // Store array of child commands meaning
+    // they depend on a command that calls them
+    // after ping or timer expires.
+    const children = [];
+    const getIndexed = (cmd, arr = []) => arr.filter(c => {
+        return c.name === cmd;
+    })[0] || [];
+    const _commands = commands.map((v, index) => {
+        const args = yargs_parser_1.default(v)._;
         const command = args.shift();
+        const _mute = typeof toArray(mute)[index] === 'string' ? true : false;
+        const timer = getIndexed(command, onTimer);
+        const pinger = getIndexed(command, onPinger);
+        const name = ((as && as[index]) || command);
+        if (timer.target)
+            children.unshift(timer.target);
+        if (pinger.target)
+            children.unshift(pinger.target);
         return {
             command,
             args,
-            index,
-            as: (as && as[index]) || command,
-            color: colors[index],
-            delay: delay[index],
-            mute: mute[index]
+            as: name,
+            color: toArray(colors)[index],
+            delay: toArray(delay)[index],
+            mute: _mute,
+            timer,
+            pinger
         };
     });
+    return {
+        commands: _commands,
+        children: children
+    };
 }
 exports.toCommands = toCommands;
 /**
@@ -197,20 +120,20 @@ exports.toCommands = toCommands;
  * @param parsed the minimist parsed arguments.
  */
 function toConfig(parsed) {
-    const { _, as, labels, colors, delay, mute, onIdle, version, ...options } = parsed;
-    console.log(parsed);
-    process.exit();
+    const { _, as, labels, colors, delay, mute, onTimer, version, onPinger, ...options } = parsed;
     const extended = {
-        as: argToArray(as || labels),
-        colors: argToArray(colors),
-        delay: argToArray(delay, 'number'),
-        mute: argToArray(mute, 'boolean'),
-        onIdle: argToArray(onIdle, 'string')
+        as: as || labels,
+        colors,
+        delay,
+        mute,
+        onTimer,
+        onPinger
     };
-    const commands = toCommands(_, extended);
+    const { commands, children } = toCommands(_, extended);
     return {
         commands,
-        options: options
+        children,
+        options: options,
     };
 }
 exports.toConfig = toConfig;

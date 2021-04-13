@@ -5,18 +5,20 @@ import { Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-import { ICommandOptions, TransformHandler } from './types';
+import { ICommandOptions, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 export declare class Command {
     private delayTimeoutId;
+    private timerHandlers;
+    private pingerHandlers;
     spawnmon: Spawnmon;
     parent: Command;
     process: ChildProcess;
     spawnmonChild: Spawnmon;
-    timer: SimpleTimer;
-    pinger: Pinger;
     subscriptions: Subscription[];
     stdin: Writable;
     prefixCache: string;
+    timer: SimpleTimer;
+    pinger: Pinger;
     options: ICommandOptions;
     constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command);
     /**
@@ -46,6 +48,10 @@ export declare class Command {
      * @param transform optional transform to past to streams.
      */
     private spawnCommand;
+    /**
+     * Some preflight we can't init until right before we run.
+     */
+    private beforeRun;
     /**
      * Gets the process id if active.
      */
@@ -87,8 +93,8 @@ export declare class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
-    onPinged(): void;
-    onIdle(): void;
+    onPinger(handler: string | Command | PingerHandler): void;
+    onTimer(handler: string | Command | SimpleTimerHandler): void;
     /**
      * Adds command to a group(s).
      *

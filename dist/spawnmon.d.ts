@@ -4,7 +4,6 @@ export declare const DEFAULT_GROUP_NAME = "default";
 export declare class Spawnmon {
     private prevChar;
     running: Command[];
-    indexes: string[];
     maxPrefix: number;
     commands: Map<string, Command>;
     groups: Map<string, string[]>;

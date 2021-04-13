@@ -20,6 +20,8 @@ const COMMAND_DEFAULTS = {
 };
 class Command {
     constructor(options, spawnmon, parent) {
+        this.timerHandlers = [];
+        this.pingerHandlers = [];
         this.subscriptions = [];
         const { defaultColor, condensed } = spawnmon.options;
         options = {
@@ -129,6 +131,18 @@ class Command {
         this.subscribe('error', this.process);
     }
     /**
+     * Some preflight we can't init until right before we run.
+     */
+    beforeRun() {
+        const { pinger, timer } = this.options;
+        // If pinger contains a target command bind it.
+        if (pinger && typeof pinger === 'object' && pinger.target)
+            this.onPinger(pinger.target);
+        // If timer contains a target command bind it.
+        if (timer && typeof timer === 'object' && timer.target)
+            this.onTimer(timer.target);
+    }
+    /**
      * Gets the process id if active.
      */
     get pid() {
@@ -198,11 +212,40 @@ class Command {
         this.subscriptions.forEach(sub => {
             sub && !sub.closed && sub.unsubscribe();
         });
+        this.timerHandlers.forEach(handler => {
+            if (this.timer)
+                this.timer.off('condition', handler);
+        });
+        this.pingerHandlers.forEach(handler => {
+            if (this.pinger)
+                this.pinger.off('connected', handler);
+        });
         return this;
     }
-    onPinged() {
+    onPinger(handler) {
+        let _handler = handler;
+        if (typeof handler === 'string' || handler instanceof Command) {
+            const cmd = this.spawnmon.get(handler);
+            if (!cmd)
+                throw utils_1.createError(`Failed to create Pinger handler using unknown command.`);
+            _handler = (update, counters) => {
+                cmd.run();
+            };
+        }
+        this.pinger.on('connected', _handler);
     }
-    onIdle() {
+    onTimer(handler) {
+        let _handler = handler;
+        if (typeof handler === 'string' || handler instanceof Command) {
+            const cmd = this.spawnmon.get(handler);
+            if (!cmd)
+                throw utils_1.createError(`Failed to create Timer handler using unknown command.`);
+            _handler = (update, counters) => {
+                cmd.run();
+            };
+        }
+        this.timer.on('condition', _handler);
+        this.timer.enable();
     }
     /**
      * Adds command to a group(s).
@@ -241,6 +284,7 @@ class Command {
      * @param transform optional tranform, handy when calling programatically.
      */
     run(transform) {
+        this.beforeRun();
         if (this.options.mute)
             this.log(utils_1.colorize(`command ${this.name} is muted.`, 'yellow'), false, false);
         if (!this.options.delay)

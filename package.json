@@ -40,10 +40,6 @@
     "ansi-colors": "^4.1.1",
     "cli-table3": "^0.6.0",
     "cross-spawn": "^7.0.3",
-    "log-symbols": "^4.1.0",
-    "minimist": "^1.2.5",
-    "minimist-options": "^4.1.0",
-    "rimraf": "^3.0.2",
     "rxjs": "^6.6.7",
     "string-length": "^4.0.2",
     "strip-ansi": "^6.0.0",
@@ -52,6 +48,7 @@
     "yargs-parser": "^20.2.7"
   },
   "devDependencies": {
+    "rimraf": "^3.0.2",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
     "@types/cross-spawn": "^6.0.2",

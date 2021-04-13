@@ -82,17 +82,17 @@ export class Pinger extends EventEmitter {
     return this.options.port;
   }
 
-  activate() {
+  enable() {
     this.options.active = true;
   }
 
-  inactivate() {
+  disable() {
     this.options.active = false;
   }
 
   start(onConnected?: (retries?: number, pinger?: Pinger) => void) {
 
-    if (!this.activate) return this;
+    if (!this.enable) return this;
 
     if (this.socket) return this;
 

@@ -17,6 +17,7 @@ export interface IHelpItem {
     type: string;
     group: HelpGroupKey;
     default?: string | number | boolean | (string | number | boolean)[];
+    coerce?: (...args: any[]) => any;
 }
 export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
     group: G;
@@ -39,6 +40,7 @@ declare const configs: {
     colors: IHelpItem;
     delay: IHelpItem;
     mute: IHelpItem;
-    onIdle: IHelpItem;
+    onTimer: IHelpItem;
+    onPinger: IHelpItem;
 };
 export default configs;

@@ -62,6 +62,7 @@ export interface IPinger {
 export interface IPingerOptions extends SocketConstructorOpts {
   active?: boolean;
   name?: string;  // updated to command name if not defined.
+  target?: string; // name of existing command to run.
   host?: string;  // default 127.0.0.1
   port?: number;  // default 3000
   attempts?: number; // default 10
@@ -79,6 +80,7 @@ export type SimpleTimerHandler = (update: any, counters?: ISimpleTimerCounters, 
 export interface ISimpleTimerOptions {
   active?: boolean;  // timer inits w/ ea. command but may not need to be active.
   name?: string;    // updated to command name if not defined.
+  target?: string; // name of command to run as target.
   interval?: number;
   timeout?: number;
   // called to check if condition is met, return true if it is.

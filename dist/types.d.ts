@@ -47,6 +47,7 @@ export interface IPinger {
 export interface IPingerOptions extends SocketConstructorOpts {
     active?: boolean;
     name?: string;
+    target?: string;
     host?: string;
     port?: number;
     attempts?: number;
@@ -58,6 +59,7 @@ export declare type SimpleTimerHandler = (update: any, counters?: ISimpleTimerCo
 export interface ISimpleTimerOptions {
     active?: boolean;
     name?: string;
+    target?: string;
     interval?: number;
     timeout?: number;
     condition?: (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => boolean;

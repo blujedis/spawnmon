@@ -1,19 +1,26 @@
-import minimist, { ParsedArgs } from 'minimist';
-import { Arguments, Configuration } from 'yargs-parser';
+import yargsParser, { Arguments, Configuration } from 'yargs-parser';
 import { StyleFunction } from 'ansi-colors';
 import { HelpConfigs } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
 export declare type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
 export declare type ToArrayType = string | boolean | number;
-/**
- * Gets preparred items for minimist.
- *
- * @param helpItems help configuration items.
- */
-export declare function toMinimistOptions(helpItems: HelpConfigs): {
-    aliases: any[];
-    options: {};
-};
+export interface IParseCommandOptions {
+    as: string[];
+    colors: string[];
+    delay: number[];
+    mute: string[];
+    onTimer: {
+        name: string;
+        target: string;
+        interval?: number;
+    }[];
+    onPinger: {
+        name: string;
+        target: string;
+        host?: string;
+        port?: number;
+    }[];
+}
 /**
  * Converts help config objects to Yargs Parser config objects.
  *
@@ -28,43 +35,29 @@ export declare function toYargsOptions(helpItems: HelpConfigs, configuration?: P
         default: any;
         alias: any;
         coerce: any;
-        configuration: Partial<Configuration>;
+        configuration: Partial<yargsParser.Configuration>;
     };
     aliases: any[];
 };
-/**
- * Ensure a parsed argument is properly converted to an array
- * from string removing {} chars.
- *
- * @param args args that should be an array.
- */
-export declare function argToArray<T = string>(args: string | string[], type?: ToArrayType, delimiter?: string): T[];
-/**
- * Normalizes, bascially some clean up after minimist parses arguments.
- *
- * @param parsed the parsed arguments.
- */
-export declare function toNormalized(parsed: ParsedArgs): Omit<minimist.ParsedArgs, "--">;
 /**
  * Builds commands into configuration for Spawnmon.
  *
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export declare function toCommands(commands: string[], options?: {
-    as: string[];
-    colors: string[];
-    delay: number[];
-    mute: boolean[];
-}): {
-    command: string;
-    args: string[];
-    index: number;
-    as: string;
-    color: string;
-    delay: number;
-    mute: boolean;
-}[];
+export declare function toCommands(commands: string[], options?: IParseCommandOptions): {
+    commands: {
+        command: string;
+        args: string[];
+        as: string;
+        color: string;
+        delay: number;
+        mute: boolean;
+        timer: any;
+        pinger: any;
+    }[];
+    children: any[];
+};
 /**
  * Parses commands and destructures options into
  * Spawnmon commands and options.
@@ -73,6 +66,7 @@ export declare function toCommands(commands: string[], options?: {
  */
 export declare function toConfig(parsed: Arguments): {
     commands: ICommandOptions[];
+    children: string[];
     options: ISpawnmonOptions;
 };
 /**

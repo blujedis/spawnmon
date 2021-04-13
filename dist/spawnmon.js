@@ -25,7 +25,6 @@ const SPAWNMON_DEFAULTS = {
 exports.DEFAULT_GROUP_NAME = 'default';
 class Spawnmon {
     constructor(options) {
-        this.indexes = [];
         this.maxPrefix = 0; // updated before run.
         this.commands = new Map();
         this.groups = new Map();
@@ -367,8 +366,8 @@ class Spawnmon {
         const cmds = commands.map(cmd => this.get(cmd));
         this.setMaxPrefix(cmds);
         // Run each command.
-        //cmds.forEach(cmd => cmd.run());
-        //this.running = cmds;
+        cmds.forEach(cmd => cmd.run());
+        this.running = cmds;
     }
     kill(...commands) {
         const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.running];

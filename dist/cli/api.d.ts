@@ -5,6 +5,7 @@ export declare function initApi(argv: any[]): {
     argv: any[];
     config: {
         commands: import("..").ICommandOptions[];
+        children: string[];
         options: import("..").ISpawnmonOptions;
     };
     hasFlags: () => boolean;
@@ -31,6 +32,7 @@ declare const _default: {
     argv: any[];
     config: {
         commands: import("..").ICommandOptions[];
+        children: string[];
         options: import("..").ISpawnmonOptions;
     };
     hasFlags: () => boolean;
@@ -46,7 +48,7 @@ declare const _default: {
         header: (usage?: boolean, padding?: boolean) => void;
         section: (label: string, color?: string, padding?: PaddingKey, indent?: string) => void;
         groups: (color?: string) => void;
-        item: (key: "templates" | "raw" | "maxProcesses" | "prefixAlign" | "defaultColor" | "condensed" | "prefix" | "prefixFill" | "prefixMax" | "labels" | "version" | "colors" | "delay" | "mute" | "onIdle", color?: string) => void;
+        item: (key: "defaultColor" | "condensed" | "mute" | "delay" | "templates" | "raw" | "maxProcesses" | "prefixAlign" | "prefix" | "prefixFill" | "prefixMax" | "labels" | "version" | "colors" | "onTimer" | "onPinger", color?: string) => void;
         examples: (color?: string) => void;
         pad: (count?: number) => void;
         message: (msg: string, color?: string, padding?: PaddingKey) => void;

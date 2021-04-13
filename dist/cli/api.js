@@ -21,13 +21,11 @@ const { templates, ...rest } = help_1.default;
 function initApi(argv) {
     let firstArg = utils_1.unflag(argv[0] || '');
     firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
-    // const { aliases, options } = toMinimistOptions(rest);
-    // const parsed = minimist(argv, minimistOptions(options));
     const yargsConfig = {
-        'strip-dashed': true
+        'strip-dashed': true,
+        'greedy-arrays': false
     };
     const { aliases, options } = utils_1.toYargsOptions(help_1.default, yargsConfig);
-    console.log(options);
     const parsed = yargs_parser_1.default(argv, options);
     const config = utils_1.toConfig(parsed);
     const flags = Object.keys(config.options);
@@ -195,9 +193,16 @@ function initApi(argv) {
         return key && hasFlag(firstArg) && hasHelp();
     };
     const run = () => {
-        const cleaned = utils_1.filterOptions([...aliases, 'version'], config.options);
+        const { commands, children, options } = config;
+        const cleaned = utils_1.filterOptions([...aliases, 'version'], options);
         const spawnmon = new spawnmon_1.Spawnmon(cleaned);
-        config.commands.forEach(opts => spawnmon.add(opts));
+        commands.forEach(opts => {
+            const cmd = spawnmon.create(opts);
+            // only assign to runnable group is not
+            // dependent on parent parent command.
+            if (!children.includes(cmd.name))
+                cmd.assign(spawnmon_1.DEFAULT_GROUP_NAME);
+        });
         spawnmon.run();
     };
     return {

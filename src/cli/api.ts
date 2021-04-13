@@ -1,11 +1,9 @@
-import minimist, { ParsedArgs } from 'minimist';
-import minimistOptions from 'minimist-options';
 import yargsParser from 'yargs-parser';
-import { Spawnmon } from '../spawnmon';
+import { DEFAULT_GROUP_NAME, Spawnmon } from '../spawnmon';
 import { readFileSync } from 'fs';
 import table from './table';
 import helpItems, { HelpGroupKey, HelpKey, IHelpItem } from './help';
-import { changeCase, createError, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toMinimistOptions, toYargsOptions, unflag } from './utils';
+import { changeCase, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toYargsOptions, unflag } from './utils';
 import { join } from 'path';
 import { StyleFunction } from 'ansi-colors';
 
@@ -28,17 +26,17 @@ export function initApi(argv: any[]) {
   let firstArg = unflag(argv[0] || '');
   firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
 
-  // const { aliases, options } = toMinimistOptions(rest);
-  // const parsed = minimist(argv, minimistOptions(options));
   const yargsConfig = {
-    'strip-dashed': true
+    'strip-dashed': true,
+    'greedy-arrays': false
   };
-  const { aliases, options } = toYargsOptions(helpItems, yargsConfig);
 
+  const { aliases, options } = toYargsOptions(helpItems, yargsConfig);
   const parsed = yargsParser(argv, options);
   const config = toConfig(parsed);
   const flags = Object.keys(config.options);
   const commands = Object.keys(config.commands);
+
   // Private Methods
 
   const formatItemProps = (conf: IHelpItem) => {
@@ -258,9 +256,16 @@ export function initApi(argv: any[]) {
   };
 
   const run = () => {
-    const cleaned = filterOptions([...aliases, 'version'], config.options);
+    const { commands, children, options } = config;
+    const cleaned = filterOptions([...aliases, 'version'], options);
     const spawnmon = new Spawnmon(cleaned);
-    config.commands.forEach(opts => spawnmon.add(opts));
+    commands.forEach(opts => {
+      const cmd = spawnmon.create(opts);
+      // only assign to runnable group is not
+      // dependent on parent parent command.
+      if (!children.includes(cmd.name))
+        cmd.assign(DEFAULT_GROUP_NAME);
+    });
     spawnmon.run();
   };
 
