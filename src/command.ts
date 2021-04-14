@@ -185,13 +185,29 @@ export class Command {
 
     const { pinger, timer } = this.options;
 
-    // If pinger contains a target command bind it.
-    if (pinger && typeof pinger === 'object' && pinger.target)
-      this.onPinger(pinger.target);
+    if (pinger) {
 
-    // If timer contains a target command bind it.
-    if (timer && typeof timer === 'object' && timer.target)
-      this.onTimer(timer.target);
+      if (!this.pinger)
+        this.pinger = new Pinger(pinger as IPingerOptions);
+
+      // If pinger contains a target command bind it.
+      if (typeof pinger === 'object' && pinger.target)
+        this.onPinger(pinger.target);
+
+    }
+
+
+    if (timer) {
+
+      if (!this.timer)
+        this.timer = new SimpleTimer(timer as ISimpleTimerOptions);
+
+      // If timer contains a target command bind it.
+      if (typeof timer === 'object' && timer.target)
+        this.onTimer(timer.target);
+
+    }
+
 
   }
 
@@ -352,10 +368,25 @@ export class Command {
     return this;
   }
 
+  /**
+   * Sets a known command to be pinged.
+   * 
+   * @param command a known command to be pinged.
+   */
   onPinger(command: string): this;
 
+  /**
+   * Sets a known command to be pinged.
+   * 
+   * @param command a known command to be pinged.
+   */
   onPinger(command: Command): this;
 
+  /**
+   * Sets a custom handler to be called on ping connected.
+   * 
+   * @param command a known command to be pinged.
+   */
   onPinger(handler: PingerHandler): this;
 
   onPinger(handlerCmdOrHost: string | Command | PingerHandler) {
@@ -381,10 +412,25 @@ export class Command {
 
   }
 
+  /**
+   * Calls known command when timer is idle.
+   * 
+   * @param command a known command to be called on timer idle.
+   */
   onTimer(command: string): this;
 
+  /**
+   * Calls known command when timer is idle.
+   * 
+   * @param command a known command to be called on timer idle.
+   */
   onTimer(command: Command): this;
 
+  /**
+   * Calls the defined handler when timer is idle.
+   * 
+   * @param handler a timer handler to be called.
+   */
   onTimer(handler: SimpleTimerHandler): this;
 
   onTimer(handlerOrCommand: string | Command | SimpleTimerHandler) {
@@ -440,7 +486,6 @@ export class Command {
    * @param options the command configuration options.
    */
   child(options: ICommandOptions): Command;
-
 
   /**
    * Adds the command as a sub command.

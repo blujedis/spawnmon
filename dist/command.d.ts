@@ -120,11 +120,41 @@ export declare class Command {
      * @param attempts the number of atempts.
      */
     setPinger(host: string, port?: number, attempts?: number): this;
+    /**
+     * Sets a known command to be pinged.
+     *
+     * @param command a known command to be pinged.
+     */
     onPinger(command: string): this;
+    /**
+     * Sets a known command to be pinged.
+     *
+     * @param command a known command to be pinged.
+     */
     onPinger(command: Command): this;
+    /**
+     * Sets a custom handler to be called on ping connected.
+     *
+     * @param command a known command to be pinged.
+     */
     onPinger(handler: PingerHandler): this;
+    /**
+     * Calls known command when timer is idle.
+     *
+     * @param command a known command to be called on timer idle.
+     */
     onTimer(command: string): this;
+    /**
+     * Calls known command when timer is idle.
+     *
+     * @param command a known command to be called on timer idle.
+     */
     onTimer(command: Command): this;
+    /**
+     * Calls the defined handler when timer is idle.
+     *
+     * @param handler a timer handler to be called.
+     */
     onTimer(handler: SimpleTimerHandler): this;
     /**
      * Adds command to a group(s).

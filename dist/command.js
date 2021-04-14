@@ -142,12 +142,20 @@ class Command {
      */
     beforeRun() {
         const { pinger, timer } = this.options;
-        // If pinger contains a target command bind it.
-        if (pinger && typeof pinger === 'object' && pinger.target)
-            this.onPinger(pinger.target);
-        // If timer contains a target command bind it.
-        if (timer && typeof timer === 'object' && timer.target)
-            this.onTimer(timer.target);
+        if (pinger) {
+            if (!this.pinger)
+                this.pinger = new pinger_1.Pinger(pinger);
+            // If pinger contains a target command bind it.
+            if (typeof pinger === 'object' && pinger.target)
+                this.onPinger(pinger.target);
+        }
+        if (timer) {
+            if (!this.timer)
+                this.timer = new timer_1.SimpleTimer(timer);
+            // If timer contains a target command bind it.
+            if (typeof timer === 'object' && timer.target)
+                this.onTimer(timer.target);
+        }
     }
     /**
      * Gets the process id if active.

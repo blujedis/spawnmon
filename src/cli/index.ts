@@ -6,6 +6,9 @@ function init() {
   if (cli.hasHelp())
     return cli.show.help();
 
+  if (cli.hasCommand('examples') || cli.hasFlag('examples'))
+    return cli.show.help('examples');
+
   if (!cli.hasCommands() && cli.hasFlag(cli.firstArg)) {
     cli.show.logo('both');
     cli.show.message(`No spawn commands present, did you mean to run:`, null, 'bottom');

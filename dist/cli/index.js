@@ -7,6 +7,8 @@ const api_1 = __importDefault(require("./api"));
 function init() {
     if (api_1.default.hasHelp())
         return api_1.default.show.help();
+    if (api_1.default.hasCommand('examples') || api_1.default.hasFlag('examples'))
+        return api_1.default.show.help('examples');
     if (!api_1.default.hasCommands() && api_1.default.hasFlag(api_1.default.firstArg)) {
         api_1.default.show.logo('both');
         api_1.default.show.message(`No spawn commands present, did you mean to run:`, null, 'bottom');

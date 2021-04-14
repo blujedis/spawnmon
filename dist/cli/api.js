@@ -46,6 +46,8 @@ function initApi(argv) {
     };
     const buildHelpItem = (key) => {
         const conf = help_1.default[key];
+        if (!conf)
+            return {};
         const { name, alias, description, type, help, examples, group } = formatItemProps(conf);
         const row = [name, alias, description, type];
         return {
@@ -130,6 +132,8 @@ function initApi(argv) {
         },
         item: (key, color) => {
             const item = buildHelpItem(key);
+            if (!item || !item.name)
+                return;
             show.section(item.name + `:`, color, 'both');
             show.section(item.help.map(h => '  ' + h).join('\n'), 'dim');
             show.section('examples:', 'green');
@@ -160,6 +164,10 @@ function initApi(argv) {
             console.log(lines.join('\n'));
         },
         help: (key = firstArg) => {
+            if (key == 'examples') {
+                show.logo('none');
+                return show.examples('blue');
+            }
             // If no help key then 
             if (!hasHelpArg(key)) {
                 show.header(true, false);
@@ -168,8 +176,6 @@ function initApi(argv) {
                 return;
             }
             show.logo('none');
-            if (key == 'examples')
-                show.examples('blue');
             return show.item(key, 'blue');
         }
     };
@@ -177,7 +183,7 @@ function initApi(argv) {
         return flags.some(v => flag.includes(utils_1.unflag(v)));
     };
     const hasCommand = (...command) => {
-        return commands.some(v => command.includes(v));
+        return parsed._.some(v => command.includes(v));
     };
     const hasFlags = () => !!Object.keys(flags).length;
     const hasCommands = () => !!commands.length;

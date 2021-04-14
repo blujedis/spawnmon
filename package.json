@@ -5,11 +5,11 @@
   "main": "dist/index",
   "types": "dist/index.d.ts",
   "bin": {
-    "spawnmon": "bin/cli",
-    "sp": "bin/cli"
+    "spawnmon": "bin/cli"
   },
   "scripts": {
     "clean": "rimraf dist/",
+    "copy": "cp ./src/cli/logo.txt dist/cli",
     "build": "tsc -b",
     "watch": "tsc -b -w",
     "docs": "typedoc ./src --options ./typedoc.json  && touch ./docs/.nojekyll",
@@ -48,7 +48,6 @@
     "yargs-parser": "^20.2.7"
   },
   "devDependencies": {
-    "rimraf": "^3.0.2",
     "@rollup/plugin-commonjs": "^18.0.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
     "@types/cross-spawn": "^6.0.2",
@@ -61,6 +60,7 @@
     "@typescript-eslint/parser": "^4.21.0",
     "eslint": "^7.15.0",
     "jest": "^26.6.3",
+    "rimraf": "^3.0.2",
     "rollup": "^2.34.2",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "^0.29.0",
