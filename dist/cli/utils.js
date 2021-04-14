@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toYargsOptions = void 0;
-const yargs_parser_1 = __importDefault(require("yargs-parser"));
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const TEMPLATE_EXP = /\{.+?\}/g;
 const helpers = {
@@ -86,7 +85,7 @@ function toCommands(commands, options) {
         return c.name === cmd;
     })[0];
     const _commands = commands.map((v, index) => {
-        const args = yargs_parser_1.default(v)._;
+        const args = v.match(/('.*?'|".*?"|\S+)/g);
         const command = args.shift();
         const _mute = typeof toArray(mute)[index] === 'string' ? true : false;
         const timer = getIndexed(command, onTimer);

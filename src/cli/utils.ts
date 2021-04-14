@@ -118,7 +118,7 @@ export function toCommands(commands: string[], options?: IParseCommandOptions) {
 
   const _commands = commands.map((v, index) => {
 
-    const args = yargsParser(v)._;
+    const args = v.match(/('.*?'|".*?"|\S+)/g);
     const command = args.shift() as string;
     const _mute = typeof toArray(mute)[index] === 'string' ? true : false;
     const timer = getIndexed(command, onTimer);

@@ -61,7 +61,8 @@ class Command {
     get prepare() {
         const { command, args, transform, color, ...rest } = this.options;
         const { uid, gid, env, cwd } = this.spawnmon.options;
-        const options = { uid, gid, env, cwd, ...rest };
+        const _env = { ...process.env, ...env };
+        const options = { uid, gid, env: _env, cwd, ...rest };
         return [command, args, options];
     }
     /**
@@ -130,7 +131,8 @@ class Command {
      * @param transform optional transform to past to streams.
      */
     spawnCommand(transform) {
-        this.process = cross_spawn_1.default(...this.prepare);
+        const args = this.prepare;
+        this.process = cross_spawn_1.default(...args);
         this.process.stdout && this.subscribe('stdout', this.process.stdout, transform);
         this.process.stderr && this.subscribe('stderr', this.process.stderr, transform);
         this.stdin = this.process.stdin;

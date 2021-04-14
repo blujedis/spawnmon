@@ -88,7 +88,8 @@ export class Command {
   private get prepare(): [string, string[], SpawnOptions] {
     const { command, args, transform, color, ...rest } = this.options;
     const { uid, gid, env, cwd } = this.spawnmon.options;
-    const options = { uid, gid, env, cwd, ...rest } as SpawnOptions;
+    const _env = { ...process.env, ...env };
+    const options = { uid, gid, env: _env, cwd, ...rest } as SpawnOptions;
     return [command, args, options];
   }
 
@@ -170,7 +171,8 @@ export class Command {
    * @param transform optional transform to past to streams. 
    */
   private spawnCommand(transform?: TransformHandler) {
-    this.process = spawn(...this.prepare);
+    const args = this.prepare;
+    this.process = spawn(...args);
     this.process.stdout && this.subscribe('stdout', this.process.stdout, transform);
     this.process.stderr && this.subscribe('stderr', this.process.stderr, transform);
     this.stdin = this.process.stdin;

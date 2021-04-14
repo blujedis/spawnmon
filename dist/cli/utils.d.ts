@@ -48,7 +48,7 @@ export declare function toYargsOptions(helpItems: HelpConfigs, configuration?: P
 export declare function toCommands(commands: string[], options?: IParseCommandOptions): {
     commands: {
         command: string;
-        args: string[];
+        args: RegExpMatchArray;
         as: string;
         color: string;
         delay: number;
