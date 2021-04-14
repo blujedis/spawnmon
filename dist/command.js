@@ -25,25 +25,29 @@ class Command {
         this.subscriptions = [];
         const { defaultColor, condensed } = spawnmon.options;
         options = {
-            ...COMMAND_DEFAULTS,
             color: defaultColor,
             condensed,
             timer: {},
             pinger: {},
             ...options
         };
+        options = utils_1.ensureDefaults(options, COMMAND_DEFAULTS);
+        const { pinger, timer } = options;
         if (/^win/.test(process.platform))
             options.detached = false;
-        const { pinger, timer } = options;
         // Timer/Pinger set to "active: false" because
         // when used internally must call method 
         // to enable as active.
-        this.pinger = new pinger_1.Pinger(typeof pinger === 'function'
-            ? { active: false, onConnected: pinger }
-            : { active: false, ...pinger });
-        this.timer = new timer_1.SimpleTimer(typeof timer === 'function'
-            ? { active: false, onCondition: timer }
-            : { active: false, ...timer });
+        if (pinger) {
+            this.pinger = new pinger_1.Pinger(typeof pinger === 'function'
+                ? { active: false, onConnected: pinger }
+                : { active: false, ...pinger });
+        }
+        if (timer) {
+            this.timer = new timer_1.SimpleTimer(typeof timer === 'function'
+                ? { active: false, onCondition: timer }
+                : { active: false, ...timer });
+        }
         this.options = options;
         this.spawnmon = spawnmon;
         this.parent = parent;
@@ -84,6 +88,9 @@ class Command {
         // if Timer exists ensure it is running.
         if (this.timer && !this.timer.running)
             this.timer.start();
+        // if Timer exists ensure it is running.
+        if (this.pinger && !this.pinger.socket)
+            this.pinger.start();
         const metadata = {
             command: this.name,
             from
@@ -233,6 +240,7 @@ class Command {
             };
         }
         this.pinger.on('connected', _handler);
+        this.pinger.enable();
     }
     onTimer(handler) {
         let _handler = handler;
@@ -300,6 +308,8 @@ class Command {
         clearTimeout(this.delayTimeoutId);
         if (this.timer)
             this.timer.stop();
+        if (this.pinger)
+            this.pinger.stop();
         !!this.process && tree_kill_1.default(this.pid, signal, (err) => {
             if (cb)
                 cb(err);

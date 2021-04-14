@@ -1,6 +1,7 @@
 
 import EventEmitter from 'events';
 import { ISimpleTimerOptions, SimpleTimerHandler, SimpleTimerEvent } from './types';
+import { ensureDefaults } from './utils';
 
 export declare interface SimpleTimer {
   on(event: SimpleTimerEvent, handler: SimpleTimerHandler): this;
@@ -30,7 +31,7 @@ export class SimpleTimer extends EventEmitter {
 
   constructor(options?: ISimpleTimerOptions) {
     super();
-    options = { ...TIMER_DEFAULTS, ...options };
+    options = ensureDefaults(options, TIMER_DEFAULTS);
     this.options = options;
     if (options.onCondition)
       this.on('condition', this.options.onCondition);

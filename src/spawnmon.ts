@@ -1,7 +1,7 @@
 import supportsColor from 'supports-color';
 import { Command } from './command';
 import { ISpawnmonOptions, ICommandOptions, Color, PrefixKey } from './types';
-import { colorize, truncate, isBlankLine, createError, simpleTimestamp } from './utils';
+import { colorize, truncate, isBlankLine, createError, simpleTimestamp, ensureDefaults } from './utils';
 
 const colorSupport = supportsColor.stdout;
 
@@ -36,10 +36,7 @@ export class Spawnmon {
 
   constructor(options?: ISpawnmonOptions) {
 
-    options = {
-      ...SPAWNMON_DEFAULTS,
-      ...options
-    };
+    options = ensureDefaults(options, SPAWNMON_DEFAULTS);
 
     if (colorSupport)
       options.env = {
@@ -169,7 +166,7 @@ export class Spawnmon {
     color = cmd.options.color || color;
 
     const map = {
-      index,
+      index: index === -1 ? '-' : index,
       pid: cmd.pid,
       command: cmd.name,
       timestamp: this.options.onTimestamp()

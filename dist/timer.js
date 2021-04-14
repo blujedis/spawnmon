@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimpleTimer = void 0;
 const events_1 = __importDefault(require("events"));
+const utils_1 = require("./utils");
 const TIMER_DEFAULTS = {
     active: true,
     name: 'anonymous',
@@ -20,7 +21,7 @@ class SimpleTimer extends events_1.default {
         this.endTime = 0;
         this.initialized = false;
         this.running = false;
-        options = { ...TIMER_DEFAULTS, ...options };
+        options = utils_1.ensureDefaults(options, TIMER_DEFAULTS);
         this.options = options;
         if (options.onCondition)
             this.on('condition', this.options.onCondition);

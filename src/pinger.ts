@@ -1,5 +1,6 @@
 import { Socket, SocketConstructorOpts } from 'net';
 import { EventEmitter } from 'events';
+import { ensureDefaults } from './utils';
 import { PingerEvent, IPingerOptions, PingerHandler } from './types';
 
 const PINGER_DEFAULTS: IPingerOptions = {
@@ -7,7 +8,8 @@ const PINGER_DEFAULTS: IPingerOptions = {
   host: '127.0.0.1',
   port: 3000,
   attempts: 10,
-  timeout: 1800
+  timeout: 1800,
+  autoStop: true
 };
 
 export declare interface Pinger {
@@ -39,7 +41,7 @@ export class Pinger extends EventEmitter {
       };
     }
 
-    this.options = { ...PINGER_DEFAULTS, ...options };
+    this.options = ensureDefaults(options, PINGER_DEFAULTS);
 
     if (this.options.onConnected)
       this.on('connected', this.options.onConnected);
@@ -63,9 +65,9 @@ export class Pinger extends EventEmitter {
 
   private reset() {
     clearTimeout(this.timeoutId);
+    this.disable();
     this.connected = false;
     this.retries = 0;
-    this.connected = false;
   }
 
   private finished() {

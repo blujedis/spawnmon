@@ -6,7 +6,7 @@ import { ChildProcess, SpawnOptions } from 'child_process';
 import { Readable, Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import treekill from 'tree-kill';
-import { colorize, createError, } from './utils';
+import { colorize, createError, ensureDefaults, } from './utils';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
 import { EventSubscriptionType, ICommandOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
@@ -43,7 +43,6 @@ export class Command {
     const { defaultColor, condensed } = spawnmon.options;
 
     options = {
-      ...COMMAND_DEFAULTS,
       color: defaultColor,
       condensed,
       timer: {},
@@ -51,23 +50,28 @@ export class Command {
       ...options
     };
 
-    if (/^win/.test(process.platform))
-      options.detached = false;
+    options = ensureDefaults(options, COMMAND_DEFAULTS);
 
     const { pinger, timer } = options;
+
+    if (/^win/.test(process.platform))
+      options.detached = false;
 
     // Timer/Pinger set to "active: false" because
     // when used internally must call method 
     // to enable as active.
 
-    this.pinger = new Pinger(typeof pinger === 'function'
-      ? { active: false, onConnected: pinger }
-      : { active: false, ...pinger });
+    if (pinger) {
+      this.pinger = new Pinger(typeof pinger === 'function'
+        ? { active: false, onConnected: pinger }
+        : { active: false, ...pinger });
+    }
 
-
-    this.timer = new SimpleTimer(typeof timer === 'function'
-      ? { active: false, onCondition: timer as SimpleTimerHandler }
-      : { active: false, ...timer }) as SimpleTimer;
+    if (timer) {
+      this.timer = new SimpleTimer(typeof timer === 'function'
+        ? { active: false, onCondition: timer as SimpleTimerHandler }
+        : { active: false, ...timer }) as SimpleTimer;
+    }
 
     this.options = options;
     this.spawnmon = spawnmon;
@@ -115,6 +119,10 @@ export class Command {
     // if Timer exists ensure it is running.
     if (this.timer && !this.timer.running)
       this.timer.start();
+
+    // if Timer exists ensure it is running.
+    if (this.pinger && !this.pinger.socket)
+      this.pinger.start();
 
     const metadata: ITransformMetadata = {
       command: this.name,
@@ -292,6 +300,7 @@ export class Command {
       };
     }
     this.pinger.on('connected', _handler);
+    this.pinger.enable();
   }
 
   onTimer(handler: string | Command | SimpleTimerHandler) {
@@ -306,7 +315,6 @@ export class Command {
     }
     this.timer.on('condition', _handler);
     this.timer.enable();
-
   }
 
   /**
@@ -415,6 +423,8 @@ export class Command {
     clearTimeout(this.delayTimeoutId);
     if (this.timer)
       this.timer.stop();
+    if (this.pinger)
+      this.pinger.stop();
     !!this.process && treekill(this.pid, signal, (err) => {
       if (cb) cb(err);
     });

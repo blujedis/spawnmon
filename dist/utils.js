@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.simpleTimestamp = exports.createError = exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
+exports.ensureDefaults = exports.simpleTimestamp = exports.createError = exports.cloneClass = exports.truncate = exports.pad = exports.escapeRegex = exports.isBlankLine = exports.colorize = exports.chomp = exports.NEWLINE_EXP = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
 const strip_ansi_1 = __importDefault(require("strip-ansi"));
 exports.NEWLINE_EXP = /\r?\n$/u;
@@ -136,4 +136,23 @@ function simpleTimestamp(date = new Date(), timeOnly = true) {
         .replace(/-/g, '.'); // change - to . it's shorter.
 }
 exports.simpleTimestamp = simpleTimestamp;
+/**
+ * Ensures an options object contains correct default values.
+ *
+ * @param options the options object to ensure defaults for.
+ * @param defaults the default values.
+ */
+function ensureDefaults(options, defaults) {
+    const run = (o, d) => {
+        for (const k in d) {
+            if (typeof o[k] === 'undefined')
+                o[k] = d[k];
+            else if (o[k] !== null && typeof o[k] === 'object' && !Array.isArray(o[k]))
+                run(o[k], d[k]);
+        }
+        return o;
+    };
+    return run({ ...options }, { ...defaults });
+}
+exports.ensureDefaults = ensureDefaults;
 //# sourceMappingURL=utils.js.map

@@ -3,12 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Pinger = void 0;
 const net_1 = require("net");
 const events_1 = require("events");
+const utils_1 = require("./utils");
 const PINGER_DEFAULTS = {
     active: true,
     host: '127.0.0.1',
     port: 3000,
     attempts: 10,
-    timeout: 1800
+    timeout: 1800,
+    autoStop: true
 };
 class Pinger extends events_1.EventEmitter {
     constructor(portOrOptions, host, socketOptions) {
@@ -23,7 +25,7 @@ class Pinger extends events_1.EventEmitter {
                 ...socketOptions
             };
         }
-        this.options = { ...PINGER_DEFAULTS, ...options };
+        this.options = utils_1.ensureDefaults(options, PINGER_DEFAULTS);
         if (this.options.onConnected)
             this.on('connected', this.options.onConnected);
     }
@@ -43,9 +45,9 @@ class Pinger extends events_1.EventEmitter {
     }
     reset() {
         clearTimeout(this.timeoutId);
+        this.disable();
         this.connected = false;
         this.retries = 0;
-        this.connected = false;
     }
     finished() {
         if (this.connected)

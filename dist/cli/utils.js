@@ -84,7 +84,7 @@ function toCommands(commands, options) {
     const children = [];
     const getIndexed = (cmd, arr = []) => arr.filter(c => {
         return c.name === cmd;
-    })[0] || [];
+    })[0];
     const _commands = commands.map((v, index) => {
         const args = yargs_parser_1.default(v)._;
         const command = args.shift();
@@ -92,11 +92,11 @@ function toCommands(commands, options) {
         const timer = getIndexed(command, onTimer);
         const pinger = getIndexed(command, onPinger);
         const name = ((as && as[index]) || command);
-        if (timer.target)
+        if (timer && timer.target)
             children.unshift(timer.target);
-        if (pinger.target)
+        if (pinger && pinger.target)
             children.unshift(pinger.target);
-        return {
+        const opts = {
             command,
             args,
             as: name,
@@ -106,6 +106,7 @@ function toCommands(commands, options) {
             timer,
             pinger
         };
+        return opts;
     });
     return {
         commands: _commands,

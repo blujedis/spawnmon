@@ -26,7 +26,7 @@ export function chomp(line) {
  * @param styles the ansi color styles to be applied.
  */
 export function colorize(str: string, ...styles: Color[]) {
-  
+
   return styles.reduce((result, color) => {
     if (!colors[color])
       return result;
@@ -136,4 +136,23 @@ export function simpleTimestamp(date = new Date(), timeOnly = true) {
     return segments[1];
   return segments.join(' ')   // join using empty space.
     .replace(/-/g, '.');        // change - to . it's shorter.
+}
+
+/**
+ * Ensures an options object contains correct default values.
+ * 
+ * @param options the options object to ensure defaults for.
+ * @param defaults the default values.
+ */
+export function ensureDefaults<T>(options: T, defaults: Partial<T>): T {
+  const run = (o, d) => {
+    for (const k in d) {
+      if (typeof o[k] === 'undefined')
+        o[k] = d[k];
+      else if (o[k] !== null && typeof o[k] === 'object' && !Array.isArray(o[k]))
+        run(o[k], d[k]);
+    }
+    return o;
+  };
+  return run({ ...options }, { ...defaults });
 }

@@ -68,6 +68,7 @@ export interface IPingerOptions extends SocketConstructorOpts {
   attempts?: number; // default 10
   timeout?: number; // default 1800
   onConnected?: PingerHandler;
+  autoStop?: boolean;
 }
 
 // TIMER

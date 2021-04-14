@@ -114,7 +114,7 @@ export function toCommands(commands: string[], options?: IParseCommandOptions) {
 
   const getIndexed = (cmd, arr = []) => arr.filter(c => {
     return c.name === cmd;
-  })[0] || [];
+  })[0];
 
   const _commands = commands.map((v, index) => {
 
@@ -125,13 +125,13 @@ export function toCommands(commands: string[], options?: IParseCommandOptions) {
     const pinger = getIndexed(command, onPinger);
     const name = ((as && as[index]) || command) as string;
 
-    if (timer.target)
+    if (timer && timer.target)
       children.unshift(timer.target);
 
-    if (pinger.target)
+    if (pinger && pinger.target)
       children.unshift(pinger.target);
 
-    return {
+    const opts = {
       command,
       args,
       as: name,
@@ -141,6 +141,8 @@ export function toCommands(commands: string[], options?: IParseCommandOptions) {
       timer,
       pinger
     };
+
+    return opts;
 
   });
 

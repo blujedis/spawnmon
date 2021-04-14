@@ -66,3 +66,10 @@ export declare function createError(err: string | (Error & Record<string, any>))
  * @param date the date to create timestamp for.
  */
 export declare function simpleTimestamp(date?: Date, timeOnly?: boolean): string;
+/**
+ * Ensures an options object contains correct default values.
+ *
+ * @param options the options object to ensure defaults for.
+ * @param defaults the default values.
+ */
+export declare function ensureDefaults<T>(options: T, defaults: Partial<T>): T;

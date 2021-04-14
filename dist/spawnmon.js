@@ -28,10 +28,7 @@ class Spawnmon {
         this.maxPrefix = 0; // updated before run.
         this.commands = new Map();
         this.groups = new Map();
-        options = {
-            ...SPAWNMON_DEFAULTS,
-            ...options
-        };
+        options = utils_1.ensureDefaults(options, SPAWNMON_DEFAULTS);
         if (colorSupport)
             options.env = {
                 ...options.env,
@@ -135,7 +132,7 @@ class Spawnmon {
         const [index, indexesLen] = this.getIndex(cmd, group);
         color = cmd.options.color || color;
         const map = {
-            index,
+            index: index === -1 ? '-' : index,
             pid: cmd.pid,
             command: cmd.name,
             timestamp: this.options.onTimestamp()

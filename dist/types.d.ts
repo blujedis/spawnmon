@@ -53,6 +53,7 @@ export interface IPingerOptions extends SocketConstructorOpts {
     attempts?: number;
     timeout?: number;
     onConnected?: PingerHandler;
+    autoStop?: boolean;
 }
 export declare type SimpleTimerEvent = 'timeout' | 'condition' | 'update';
 export declare type SimpleTimerHandler = (update: any, counters?: ISimpleTimerCounters, timer?: SimpleTimer) => void;
