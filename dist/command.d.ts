@@ -5,7 +5,7 @@ import { Writable } from 'stream';
 import { Spawnmon } from './spawnmon';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-import { ICommandOptions, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
+import { ICommandOptions, IPingerOptions, ISimpleTimerOptions, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 export declare class Command {
     private delayTimeoutId;
     private timerHandlers;
@@ -93,8 +93,39 @@ export declare class Command {
      * Unsubscribes from all subscriptions.
      */
     unsubscribe(): this;
-    onPinger(handler: string | Command | PingerHandler): void;
-    onTimer(handler: string | Command | SimpleTimerHandler): void;
+    /**
+     * Sets timer options.
+     *
+     * @param options the timer options to be set.
+     */
+    setTimer(options: ISimpleTimerOptions, timeout?: number): this;
+    /**
+     * Sets timer interval and timeout options.
+     *
+     * @param interval the timer options to be set.
+     * @param timeout the timeout used to abort timer.
+     */
+    setTimer(interval: ISimpleTimerOptions, timeout?: number): this;
+    /**
+     * Sets the pinger options.
+     *
+     * @param options the pinger options to be set.
+     */
+    setPinger(options: IPingerOptions): this;
+    /**
+     * Sets host, port and attempt options for pinger.
+     *
+     * @param host the host to be pinged.
+     * @param port the host's port.
+     * @param attempts the number of atempts.
+     */
+    setPinger(host: string, port?: number, attempts?: number): this;
+    onPinger(command: string): this;
+    onPinger(command: Command): this;
+    onPinger(handler: PingerHandler): this;
+    onTimer(command: string): this;
+    onTimer(command: Command): this;
+    onTimer(handler: SimpleTimerHandler): this;
     /**
      * Adds command to a group(s).
      *
@@ -114,11 +145,11 @@ export declare class Command {
      */
     child(options: ICommandOptions): Command;
     /**
-    * Adds the command as a sub command.
-    *
-    * @param command a command instance.
-    * @param as an alias name for the command.
-    */
+     * Adds the command as a sub command.
+     *
+     * @param command a command instance.
+     * @param as an alias name for the command.
+     */
     child(command: Command, as?: string): Command;
     /**
      * Adds a new sub command.

@@ -61,12 +61,12 @@ export interface IPinger {
 
 export interface IPingerOptions extends SocketConstructorOpts {
   active?: boolean;
-  name?: string;  // updated to command name if not defined.
-  target?: string; // name of existing command to run.
-  host?: string;  // default 127.0.0.1
-  port?: number;  // default 3000
-  attempts?: number; // default 10
-  timeout?: number; // default 1800
+  name?: string;                  // updated to command name if not defined.
+  target?: string;                // name of existing command to run.
+  host?: string;                  // default 127.0.0.1
+  port?: number;                  // default 3000
+  attempts?: number;              // default 10
+  timeout?: number;               // default 1800
   onConnected?: PingerHandler;
   autoStop?: boolean;
 }

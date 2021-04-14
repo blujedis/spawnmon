@@ -1,5 +1,4 @@
 
-import { Spawnmon } from '../spawnmon';
 import cli from './api';
 
 function init() {

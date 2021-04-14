@@ -102,11 +102,6 @@ function initApi(argv) {
         }
         return lines;
     };
-    // Spawnmon has no commands so first arg must be
-    // either a flag option or start with a " or '
-    function isValidFirstArg(arg) {
-        return /^--?/.test(arg) || /^("|')/.test(arg);
-    }
     // Public Methods
     const show = {
         logo: (padding = 'none') => {

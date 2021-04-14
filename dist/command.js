@@ -229,31 +229,56 @@ class Command {
         });
         return this;
     }
-    onPinger(handler) {
-        let _handler = handler;
-        if (typeof handler === 'string' || handler instanceof Command) {
-            const cmd = this.spawnmon.get(handler);
+    setTimer(optionsOrInterval, timeout) {
+        let options = optionsOrInterval;
+        if (typeof optionsOrInterval === 'string') {
+            options = {
+                interval: optionsOrInterval,
+                timeout
+            };
+        }
+        this.options.timer = options;
+        return this;
+    }
+    setPinger(optionsOrHost, port, attempts) {
+        let options = optionsOrHost;
+        if (typeof optionsOrHost === 'string') {
+            options = {
+                host: optionsOrHost,
+                port,
+                attempts
+            };
+        }
+        this.options.pinger = options;
+        return this;
+    }
+    onPinger(handlerCmdOrHost) {
+        let handler = handlerCmdOrHost;
+        if (typeof handlerCmdOrHost === 'string' || handlerCmdOrHost instanceof Command) {
+            const cmd = this.spawnmon.get(handlerCmdOrHost);
             if (!cmd)
                 throw utils_1.createError(`Failed to create Pinger handler using unknown command.`);
-            _handler = (update, counters) => {
+            handler = (update, counters) => {
                 cmd.run();
             };
         }
-        this.pinger.on('connected', _handler);
+        this.pinger.on('connected', handler);
         this.pinger.enable();
+        return this;
     }
-    onTimer(handler) {
-        let _handler = handler;
-        if (typeof handler === 'string' || handler instanceof Command) {
-            const cmd = this.spawnmon.get(handler);
+    onTimer(handlerOrCommand) {
+        let handler = handlerOrCommand;
+        if (typeof handlerOrCommand === 'string' || handlerOrCommand instanceof Command) {
+            const cmd = this.spawnmon.get(handlerOrCommand);
             if (!cmd)
                 throw utils_1.createError(`Failed to create Timer handler using unknown command.`);
-            _handler = (update, counters) => {
+            handler = (update, counters) => {
                 cmd.run();
             };
         }
-        this.timer.on('condition', _handler);
+        this.timer.on('condition', handler);
         this.timer.enable();
+        return this;
     }
     /**
      * Adds command to a group(s).

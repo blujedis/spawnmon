@@ -9,7 +9,7 @@ import treekill from 'tree-kill';
 import { colorize, createError, ensureDefaults, } from './utils';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
-import { EventSubscriptionType, ICommandOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
+import { EventSubscriptionType, ICommandOptions, IPingerOptions, ISimpleTimerOptions, ITransformMetadata, PingerHandler, SimpleTimerHandler, TransformHandler } from './types';
 
 const COMMAND_DEFAULTS: ICommandOptions = {
   command: '',
@@ -289,32 +289,126 @@ export class Command {
     return this;
   }
 
-  onPinger(handler: string | Command | PingerHandler) {
-    let _handler = handler as PingerHandler;
-    if (typeof handler === 'string' || handler instanceof Command) {
-      const cmd = this.spawnmon.get(handler);
-      if (!cmd)
-        throw createError(`Failed to create Pinger handler using unknown command.`);
-      _handler = (update, counters) => {
-        cmd.run();
+  /**
+   * Sets timer options.
+   * 
+   * @param options the timer options to be set.
+   */
+  setTimer(options: ISimpleTimerOptions, timeout?: number): this;
+
+  /**
+   * Sets timer interval and timeout options.
+   * 
+   * @param interval the timer options to be set.
+   * @param timeout the timeout used to abort timer.
+   */
+  setTimer(interval: ISimpleTimerOptions, timeout?: number): this;
+
+  setTimer(optionsOrInterval: ISimpleTimerOptions, timeout?: number) {
+
+    let options = optionsOrInterval as ISimpleTimerOptions;
+
+    if (typeof optionsOrInterval === 'string') {
+      options = {
+        interval: optionsOrInterval,
+        timeout
       };
     }
-    this.pinger.on('connected', _handler);
-    this.pinger.enable();
+
+    this.options.timer = options;
+    return this;
+
   }
 
-  onTimer(handler: string | Command | SimpleTimerHandler) {
-    let _handler = handler as SimpleTimerHandler;
-    if (typeof handler === 'string' || handler instanceof Command) {
-      const cmd = this.spawnmon.get(handler);
-      if (!cmd)
-        throw createError(`Failed to create Timer handler using unknown command.`);
-      _handler = (update, counters) => {
-        cmd.run();
+  /**
+   * Sets the pinger options.
+   * 
+   * @param options the pinger options to be set.
+   */
+  setPinger(options: IPingerOptions): this;
+
+  /**
+   * Sets host, port and attempt options for pinger.
+   * 
+   * @param host the host to be pinged.
+   * @param port the host's port.
+   * @param attempts the number of atempts.
+   */
+  setPinger(host: string, port?: number, attempts?: number): this;
+
+  setPinger(optionsOrHost: string | IPingerOptions, port?: number, attempts?: number) {
+
+    let options = optionsOrHost as IPingerOptions;
+
+    if (typeof optionsOrHost === 'string') {
+      options = {
+        host: optionsOrHost,
+        port,
+        attempts
       };
     }
-    this.timer.on('condition', _handler);
+
+    this.options.pinger = options;
+    return this;
+  }
+
+  onPinger(command: string): this;
+
+  onPinger(command: Command): this;
+
+  onPinger(handler: PingerHandler): this;
+
+  onPinger(handlerCmdOrHost: string | Command | PingerHandler) {
+
+    let handler = handlerCmdOrHost as PingerHandler;
+
+    if (typeof handlerCmdOrHost === 'string' || handlerCmdOrHost instanceof Command) {
+
+      const cmd = this.spawnmon.get(handlerCmdOrHost);
+
+      if (!cmd)
+        throw createError(`Failed to create Pinger handler using unknown command.`);
+      handler = (update, counters) => {
+        cmd.run();
+      };
+
+    }
+
+    this.pinger.on('connected', handler);
+    this.pinger.enable();
+
+    return this;
+
+  }
+
+  onTimer(command: string): this;
+
+  onTimer(command: Command): this;
+
+  onTimer(handler: SimpleTimerHandler): this;
+
+  onTimer(handlerOrCommand: string | Command | SimpleTimerHandler) {
+
+    let handler = handlerOrCommand as SimpleTimerHandler;
+
+    if (typeof handlerOrCommand === 'string' || handlerOrCommand instanceof Command) {
+
+      const cmd = this.spawnmon.get(handlerOrCommand);
+
+      if (!cmd)
+        throw createError(`Failed to create Timer handler using unknown command.`);
+
+      handler = (update, counters) => {
+        cmd.run();
+      };
+
+    }
+
+    this.timer.on('condition', handler);
     this.timer.enable();
+
+    return this;
+
   }
 
   /**
@@ -347,12 +441,13 @@ export class Command {
    */
   child(options: ICommandOptions): Command;
 
+
   /**
-  * Adds the command as a sub command.
-  * 
-  * @param command a command instance.
-  * @param as an alias name for the command.
-  */
+   * Adds the command as a sub command.
+   * 
+   * @param command a command instance.
+   * @param as an alias name for the command.
+   */
   child(command: Command, as?: string): Command;
 
   /**

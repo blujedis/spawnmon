@@ -4,23 +4,14 @@ Similar to [concurrently](https://www.npmjs.com/package/concurrently) or [npm-ru
 
 Also built in helpers for pinging a socket ensuring it's live and then firing off another event.
 
-## What's Working
+## Programmatic Usage
 
-Programatically it wroks great below is a very crude example but may give you an idea. More examples coming in the next few days.
+
 
 ```js
 const { Spawnmon, Pinger } = require('spawnmon');
 
 const sm = new Spawnmon();
-
-// Next release options can be passed or a 
-// Pinger instance to the command's options
-// so there aren't as many moving pieces, simpler.
-// 
-// Pinger is very very simple opens a Socket retries
-// a defined number of times then exits if not connected
-// withing that retry period. Simple works perfect!
-const ping = new Pinger({ retries: 10 });
 
 ping.on('retry', (retries) => {
   console.log(`(${retries}) Pinging host 127.0.0.1:3000.`);
@@ -32,11 +23,9 @@ ping.on('connected', () => {
   console.log('Socket connected!');
 });
 
-sm.add('rollup', ['-c', '-w']);
+sm.add('rollup', ['-c', '-w']});
 
 sm.add('react-app-rewired', 'start')
-
-ping.start();
 
 sm.run();
 ```
