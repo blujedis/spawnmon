@@ -21,8 +21,7 @@ const helpers = {
  *
  * @param helpItems the configuration object to be converted.
  */
-function toYargsOptions(helpItems, configuration = {}) {
-    const { templates, ...clean } = helpItems;
+function toYargsOptions(items, configuration = {}) {
     const boolean = [];
     const number = [];
     const array = [];
@@ -31,8 +30,8 @@ function toYargsOptions(helpItems, configuration = {}) {
     const alias = {};
     const coerce = {};
     let aliases = [];
-    for (const k in clean) {
-        const conf = clean[k];
+    for (const k in items) {
+        const conf = items[k];
         const isArray = conf.type.startsWith('[');
         const type = isArray ? conf.type.replace(/(\[|\])/g, '') : conf.type;
         if (isArray)
@@ -70,42 +69,95 @@ function toYargsOptions(helpItems, configuration = {}) {
 }
 exports.toYargsOptions = toYargsOptions;
 /**
+ * Sorts arrays and parses into keyed object.
+ *
+ * @param options the parsed options object.
+ */
+function argsToObj(options) {
+    const obj = {};
+    for (const k in options) {
+        options[k] = options[k] || [];
+        const args = options[k].sort((a, b) => {
+            if (a[0] < b[0])
+                return -1;
+            else if (a[0] > b[0])
+                return 1;
+            else
+                return 0;
+        });
+        obj[k] = args.reduce((a, c) => {
+            const index = c.shift();
+            a[index] = c;
+            return a;
+        }, {});
+    }
+    return obj;
+}
+/**
  * Builds commands into configuration for Spawnmon.
  *
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
 function toCommands(commands, options) {
-    const { as, colors, delay, mute, onTimer, onPinger } = options;
     // Store array of child commands meaning
-    // they depend on a command that calls them
-    // after ping or timer expires.
     const children = [];
-    const getIndexed = (cmd, arr = []) => arr.filter(c => {
-        return c.name === cmd;
-    })[0];
-    const _commands = commands.map((v, index) => {
+    const normalized = argsToObj(options);
+    let _commands = [...commands].map((v, index) => {
         const args = v.match(/('.*?'|".*?"|\S+)/g);
         const command = args.shift();
-        const _mute = typeof toArray(mute)[index] === 'string' ? true : false;
-        const timer = getIndexed(command, onTimer);
-        const pinger = getIndexed(command, onPinger);
-        const name = ((as && as[index]) || command);
-        if (timer && timer.target)
-            children.unshift(timer.target);
-        if (pinger && pinger.target)
-            children.unshift(pinger.target);
-        const opts = {
+        return {
             command,
             args,
-            as: name,
-            color: toArray(colors)[index],
-            delay: toArray(delay)[index],
-            mute: _mute,
-            timer,
-            pinger
+            index,
+            as: command + '-' + index,
+            group: undefined,
+            color: undefined,
+            delay: undefined,
+            mute: undefined,
+            timer: undefined,
+            pinger: undefined
         };
-        return opts;
+    });
+    const getOpts = (key, index) => {
+        const typeOpts = normalized[key] || {};
+        return (typeOpts[index] || []);
+    };
+    const getCmdName = (index) => {
+        if (!_commands[index])
+            return undefined;
+        return _commands[index].as;
+    };
+    _commands = _commands.map((cmd, index) => {
+        const [tSource, tTarget, interval] = getOpts('onTimer', index);
+        const [pSource, pTarget, retries] = getOpts('onPinger', index);
+        const [host, port] = getOpts('onPingerAddress', index);
+        const timerChild = getCmdName(tTarget);
+        const pingerChild = getCmdName(pTarget);
+        if (timerChild)
+            children.push(timerChild);
+        if (pingerChild)
+            children.push(pingerChild);
+        cmd = {
+            ...cmd,
+            group: getOpts('group', index).shift(),
+            color: getOpts('color', index).shift(),
+            delay: getOpts('delay', index).shift(),
+            mute: getOpts('mute', index).shift(),
+            timer: {
+                name: getCmdName(tSource),
+                target: getCmdName(tTarget),
+                interval
+            },
+            pinger: {
+                name: getCmdName(pSource),
+                target: getCmdName(pTarget),
+                host,
+                port,
+                retries
+            }
+        };
+        return cmd;
     });
     return {
         commands: _commands,
@@ -120,14 +172,15 @@ exports.toCommands = toCommands;
  * @param parsed the minimist parsed arguments.
  */
 function toConfig(parsed) {
-    const { _, as, labels, colors, delay, mute, onTimer, version, onPinger, ...options } = parsed;
+    const { _, color, delay, mute, onTimer, version, onPinger, onPingerAddress, group, ...options } = parsed;
     const extended = {
-        as: as || labels,
-        colors,
+        group,
+        color,
         delay,
         mute,
         onTimer,
-        onPinger
+        onPinger,
+        onPingerAddress
     };
     const { commands, children } = toCommands(_, extended);
     return {

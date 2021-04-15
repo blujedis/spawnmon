@@ -2,8 +2,15 @@ import yargsParser from 'yargs-parser';
 import { DEFAULT_GROUP_NAME, Spawnmon } from '../spawnmon';
 import { readFileSync } from 'fs';
 import table from './table';
-import helpItems, { HelpGroupKey, HelpKey, IHelpItem } from './help';
-import { changeCase, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toYargsOptions, unflag } from './utils';
+import {
+  HelpGroupKey, HelpKey, IHelpItem, configs,
+  logo, usage as helpUsage
+} from './help';
+import {
+  changeCase, filterOptions, simpleFormatter,
+  stylizer, toArray, toConfig, toFlag,
+  toYargsOptions, unflag
+} from './utils';
 import { join } from 'path';
 import { StyleFunction } from 'ansi-colors';
 
@@ -17,8 +24,6 @@ const DEFAULT_MAP = {
   ...pkg
 };
 
-const { templates, ...rest } = helpItems;
-
 // Simple api for managing commands.
 
 export function initApi(argv: any[]) {
@@ -28,10 +33,11 @@ export function initApi(argv: any[]) {
 
   const yargsConfig = {
     'strip-dashed': true,
-    'greedy-arrays': false
+    'greedy-arrays': false,
+    'duplicate-arguments-array': false
   };
 
-  const { aliases, options } = toYargsOptions(helpItems, yargsConfig);
+  const { aliases, options } = toYargsOptions(configs, yargsConfig);
   const parsed = yargsParser(argv, options);
   const config = toConfig(parsed);
   const flags = Object.keys(config.options);
@@ -58,7 +64,7 @@ export function initApi(argv: any[]) {
 
   const buildHelpItem = <K extends HelpKey>(key: K) => {
 
-    const conf = helpItems[key] as IHelpItem;
+    const conf = configs[key] as IHelpItem;
 
     if (!conf) return {};
 
@@ -80,7 +86,7 @@ export function initApi(argv: any[]) {
 
     const groups: HelpGroupKey[] = [];
 
-    const confs = Object.keys(rest).reduce((result, key) => {
+    const confs = Object.keys(configs).reduce((result, key) => {
 
       const conf = buildHelpItem(key as HelpKey);
 
@@ -124,11 +130,11 @@ export function initApi(argv: any[]) {
 
   const getHeader = (usage = true, padding?: boolean) => {
     const lines = [];
-    lines.push(' ' + templates.logo); // need space for logo alignment.
+    lines.push(' ' + logo); // need space for logo alignment.
     if (!usage && padding || usage)
       lines.push('');
     if (usage) {
-      lines.push(stylizer(simpleFormatter(templates.usage, DEFAULT_MAP), 'cyan'));
+      lines.push(stylizer(simpleFormatter(helpUsage, DEFAULT_MAP), 'cyan'));
       lines.push('');
       lines.push(stylizer(simpleFormatter(`detailed help: {app} --some-option -h`, DEFAULT_MAP), 'dim.italic'));
       if (padding)
@@ -142,7 +148,7 @@ export function initApi(argv: any[]) {
   const show = {
 
     logo: (padding: PaddingKey = 'none') => {
-      const lines = padLine(' ' + templates.logo, padding);
+      const lines = padLine(' ' + logo, padding);
       return console.log(lines.join('\n'));
     },
 

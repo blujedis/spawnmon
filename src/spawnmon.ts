@@ -764,6 +764,10 @@ export class Spawnmon {
 
   }
 
+  runGroup(group: string, ...groups: string[]) {
+
+  }
+
   /**
   * Kills running commands.
   */

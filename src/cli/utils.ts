@@ -8,14 +8,6 @@ export type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot
 
 export type ToArrayType = string | boolean | number;
 
-export interface IParseCommandOptions {
-  as: string[];
-  colors: string[];
-  delay: number[];
-  mute: string[];
-  onTimer: { name: string, target: string, interval?: number }[];
-  onPinger: { name: string, target: string, host?: string, port?: number }[];
-}
 
 const TEMPLATE_EXP = /\{.+?\}/g;
 
@@ -35,9 +27,7 @@ const helpers = {
  * 
  * @param helpItems the configuration object to be converted.
  */
-export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Configuration> = {}) {
-
-  const { templates, ...clean } = helpItems;
+export function toYargsOptions(items: HelpConfigs, configuration: Partial<Configuration> = {}) {
 
   const boolean = [];
   const number = [];
@@ -48,9 +38,9 @@ export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Co
   const coerce = {} as any;
   let aliases = [];
 
-  for (const k in clean) {
+  for (const k in items) {
 
-    const conf = clean[k] as IHelpItem;
+    const conf = items[k] as IHelpItem;
     const isArray = conf.type.startsWith('[');
     const type = isArray ? conf.type.replace(/(\[|\])/g, '') : conf.type;
 
@@ -88,12 +78,44 @@ export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Co
     configuration
   };
 
-
-
   return {
     options,
     aliases
   };
+
+}
+
+/**
+ * Sorts arrays and parses into keyed object.
+ * 
+ * @param options the parsed options object.
+ */
+function argsToObj<T extends Record<string, any[]>>(options?: T) {
+
+  const obj = {} as { [K in keyof T]: { [key: string]: any[] } };
+
+  for (const k in options) {
+
+    options[k] = options[k] || [] as any;
+
+    const args = options[k].sort((a, b) => {
+      if (a[0] < b[0])
+        return -1;
+      else if (a[0] > b[0])
+        return 1;
+      else
+        return 0;
+    });
+
+    obj[k] = args.reduce((a, c) => {
+      const index = c.shift();
+      a[index] = c;
+      return a;
+    }, {} as { [key: string]: any[] });
+
+  }
+
+  return obj;
 
 }
 
@@ -103,46 +125,77 @@ export function toYargsOptions(helpItems: HelpConfigs, configuration: Partial<Co
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export function toCommands(commands: string[], options?: IParseCommandOptions) {
-
-  const { as, colors, delay, mute, onTimer, onPinger } = options;
+export function toCommands(commands: string[], options?: Record<string, any>) {
 
   // Store array of child commands meaning
-  // they depend on a command that calls them
-  // after ping or timer expires.
   const children = [];
 
-  const getIndexed = (cmd, arr = []) => arr.filter(c => {
-    return c.name === cmd;
-  })[0];
+  const normalized = argsToObj(options);
 
-  const _commands = commands.map((v, index) => {
-
+  let _commands = [...commands].map((v, index) => {
     const args = v.match(/('.*?'|".*?"|\S+)/g);
     const command = args.shift() as string;
-    const _mute = typeof toArray(mute)[index] === 'string' ? true : false;
-    const timer = getIndexed(command, onTimer);
-    const pinger = getIndexed(command, onPinger);
-    const name = ((as && as[index]) || command) as string;
-
-    if (timer && timer.target)
-      children.unshift(timer.target);
-
-    if (pinger && pinger.target)
-      children.unshift(pinger.target);
-
-    const opts = {
+    return {
       command,
       args,
-      as: name,
-      color: toArray(colors)[index],
-      delay: toArray<number>(delay)[index],
-      mute: _mute,
-      timer,
-      pinger
+      index,
+      as: command + '-' + index,
+      group: undefined as string,
+      color: undefined as string,
+      delay: undefined as number,
+      mute: undefined as boolean,
+      timer: undefined as any,
+      pinger: undefined as any
+    };
+  });
+
+  const getOpts = (key: string, index: number) => {
+    const typeOpts = normalized[key] || {};
+    return (typeOpts[index] || []);
+  };
+
+  const getCmdName = (index) => {
+    if (!_commands[index])
+      return undefined;
+    return _commands[index].as;
+  };
+
+  _commands = _commands.map((cmd, index) => {
+
+    const [tSource, tTarget, interval] = getOpts('onTimer', index);
+    const [pSource, pTarget, retries] = getOpts('onPinger', index);
+    const [host, port] = getOpts('onPingerAddress', index);
+
+    const timerChild = getCmdName(tTarget);
+    const pingerChild = getCmdName(pTarget);
+
+    if (timerChild)
+      children.push(timerChild);
+
+    if (pingerChild)
+      children.push(pingerChild);
+
+    cmd = {
+      ...cmd,
+      group: getOpts('group', index).shift(),
+      color: getOpts('color', index).shift(),
+      delay: getOpts('delay', index).shift(),
+      mute: getOpts('mute', index).shift(),
+      timer: {
+        name: getCmdName(tSource),
+        target: getCmdName(tTarget),
+        interval
+      },
+      pinger: {
+        name: getCmdName(pSource),
+        target: getCmdName(pTarget),
+        host,
+        port,
+        retries
+      }
     };
 
-    return opts;
+    return cmd;
 
   });
 
@@ -161,22 +214,25 @@ export function toCommands(commands: string[], options?: IParseCommandOptions) {
  */
 export function toConfig(parsed: Arguments) {
 
+
   const {
-    _, as, labels, colors, delay, mute, onTimer,
-    version, onPinger,
+    _, color, delay, mute, onTimer, version,
+    onPinger, onPingerAddress, group,
     ...options
   } = parsed;
 
   const extended = {
-    as: as || labels,
-    colors,
+    group,
+    color,
     delay,
     mute,
     onTimer,
-    onPinger
+    onPinger,
+    onPingerAddress
   };
 
-  const { commands, children } = toCommands(_, extended) as { children: string[], commands: ICommandOptions[] };
+  const { commands, children } =
+    toCommands(_, extended) as { children: string[], commands: ICommandOptions[] };
 
   return {
     commands,

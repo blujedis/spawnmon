@@ -4,29 +4,12 @@ import { HelpConfigs } from './help';
 import { ICommandOptions, ISpawnmonOptions } from '../types';
 export declare type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
 export declare type ToArrayType = string | boolean | number;
-export interface IParseCommandOptions {
-    as: string[];
-    colors: string[];
-    delay: number[];
-    mute: string[];
-    onTimer: {
-        name: string;
-        target: string;
-        interval?: number;
-    }[];
-    onPinger: {
-        name: string;
-        target: string;
-        host?: string;
-        port?: number;
-    }[];
-}
 /**
  * Converts help config objects to Yargs Parser config objects.
  *
  * @param helpItems the configuration object to be converted.
  */
-export declare function toYargsOptions(helpItems: HelpConfigs, configuration?: Partial<Configuration>): {
+export declare function toYargsOptions(items: HelpConfigs, configuration?: Partial<Configuration>): {
     options: {
         string: any[];
         boolean: any[];
@@ -45,11 +28,13 @@ export declare function toYargsOptions(helpItems: HelpConfigs, configuration?: P
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export declare function toCommands(commands: string[], options?: IParseCommandOptions): {
+export declare function toCommands(commands: string[], options?: Record<string, any>): {
     commands: {
         command: string;
         args: RegExpMatchArray;
+        index: number;
         as: string;
+        group: string;
         color: string;
         delay: number;
         mute: boolean;

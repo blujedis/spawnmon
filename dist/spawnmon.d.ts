@@ -316,6 +316,7 @@ export declare class Spawnmon {
     * @param commands the name of the commands to run in group.
     */
     run(group: string, ...commands: string[]): void;
+    runGroup(group: string, ...groups: string[]): void;
     /**
     * Kills running commands.
     */

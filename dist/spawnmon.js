@@ -366,6 +366,8 @@ class Spawnmon {
         cmds.forEach(cmd => cmd.run());
         this.running = cmds;
     }
+    runGroup(group, ...groups) {
+    }
     kill(...commands) {
         const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.running];
         cmds.forEach(cmd => cmd.kill());

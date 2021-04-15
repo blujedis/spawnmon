@@ -8,7 +8,7 @@ const yargs_parser_1 = __importDefault(require("yargs-parser"));
 const spawnmon_1 = require("../spawnmon");
 const fs_1 = require("fs");
 const table_1 = __importDefault(require("./table"));
-const help_1 = __importDefault(require("./help"));
+const help_1 = require("./help");
 const utils_1 = require("./utils");
 const path_1 = require("path");
 const { name, ...pkg } = JSON.parse(fs_1.readFileSync(path_1.join(__dirname, '../../package.json')).toString());
@@ -16,16 +16,16 @@ const DEFAULT_MAP = {
     app: name,
     ...pkg
 };
-const { templates, ...rest } = help_1.default;
 // Simple api for managing commands.
 function initApi(argv) {
     let firstArg = utils_1.unflag(argv[0] || '');
     firstArg = (firstArg === 'h' || firstArg === 'help' ? '' : firstArg);
     const yargsConfig = {
         'strip-dashed': true,
-        'greedy-arrays': false
+        'greedy-arrays': false,
+        'duplicate-arguments-array': false
     };
-    const { aliases, options } = utils_1.toYargsOptions(help_1.default, yargsConfig);
+    const { aliases, options } = utils_1.toYargsOptions(help_1.configs, yargsConfig);
     const parsed = yargs_parser_1.default(argv, options);
     const config = utils_1.toConfig(parsed);
     const flags = Object.keys(config.options);
@@ -45,7 +45,7 @@ function initApi(argv) {
         };
     };
     const buildHelpItem = (key) => {
-        const conf = help_1.default[key];
+        const conf = help_1.configs[key];
         if (!conf)
             return {};
         const { name, alias, description, type, help, examples, group } = formatItemProps(conf);
@@ -60,7 +60,7 @@ function initApi(argv) {
     };
     const buildHelpItems = () => {
         const groups = [];
-        const confs = Object.keys(rest).reduce((result, key) => {
+        const confs = Object.keys(help_1.configs).reduce((result, key) => {
             const conf = buildHelpItem(key);
             if (!groups.includes(conf.group))
                 groups.push(conf.group);
@@ -92,11 +92,11 @@ function initApi(argv) {
     };
     const getHeader = (usage = true, padding) => {
         const lines = [];
-        lines.push(' ' + templates.logo); // need space for logo alignment.
+        lines.push(' ' + help_1.logo); // need space for logo alignment.
         if (!usage && padding || usage)
             lines.push('');
         if (usage) {
-            lines.push(utils_1.stylizer(utils_1.simpleFormatter(templates.usage, DEFAULT_MAP), 'cyan'));
+            lines.push(utils_1.stylizer(utils_1.simpleFormatter(help_1.usage, DEFAULT_MAP), 'cyan'));
             lines.push('');
             lines.push(utils_1.stylizer(utils_1.simpleFormatter(`detailed help: {app} --some-option -h`, DEFAULT_MAP), 'dim.italic'));
             if (padding)
@@ -107,7 +107,7 @@ function initApi(argv) {
     // Public Methods
     const show = {
         logo: (padding = 'none') => {
-            const lines = padLine(' ' + templates.logo, padding);
+            const lines = padLine(' ' + help_1.logo, padding);
             return console.log(lines.join('\n'));
         },
         header: (usage = true, padding) => console.log(getHeader(usage, padding).join('\n')),

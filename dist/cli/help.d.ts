@@ -1,12 +1,11 @@
-export declare type HelpConfigs = Omit<typeof configs, 'templates'> & {
-    templates?: typeof configs.templates;
-};
+declare const logo: string;
+export declare type HelpConfigs = typeof configs;
 export declare type HelpKey = keyof HelpConfigs;
 export declare type HelpItem<K extends HelpKey> = HelpConfigs[K];
 export declare type Help = {
     [K in HelpKey]: HelpConfigs[K];
 };
-export declare type HelpGroupKey = 'prefix' | 'misc' | 'styling' | 'process';
+export declare type HelpGroupKey = 'spawnmon' | 'command' | 'misc';
 export interface IHelpItem {
     name: string;
     description: string;
@@ -22,11 +21,9 @@ export interface IHelpItem {
 export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
     group: G;
 }
+export declare type TransformHandler = (val: any, ...args: any[]) => any;
+declare const usage = "usage: {app} [options] <commands...>";
 declare const configs: {
-    templates: {
-        logo: string;
-        usage: string;
-    };
     raw: IHelpItem;
     maxProcesses: IHelpItem;
     prefixAlign: IHelpItem;
@@ -35,12 +32,13 @@ declare const configs: {
     prefix: IHelpItem;
     prefixFill: IHelpItem;
     prefixMax: IHelpItem;
-    labels: IHelpItem;
+    group: IHelpItem;
     version: IHelpItem;
-    colors: IHelpItem;
+    color: IHelpItem;
     delay: IHelpItem;
     mute: IHelpItem;
     onTimer: IHelpItem;
     onPinger: IHelpItem;
+    onPingerAddress: IHelpItem;
 };
-export default configs;
+export { configs, usage, logo };
