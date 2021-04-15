@@ -73,6 +73,14 @@ export class Command {
         : { active: false, ...timer }) as SimpleTimer;
     }
 
+
+    // If group(s) were provided in 
+    // config assign it here.
+    if (options.group) {
+      if (!Array.isArray(options.group))
+        options.group = [options.group];
+    }
+
     this.options = options;
     this.spawnmon = spawnmon;
     this.parent = parent;
@@ -457,29 +465,6 @@ export class Command {
 
     return this;
 
-  }
-
-  /**
-   * Adds command to a group(s).
-   * 
-   * @param groups the name of the group(s) to add the command to.
-   */
-  assign(...groups: string[]) {
-    groups.forEach(g => {
-      this.spawnmon.assign(g, this);
-    });
-    return this;
-  }
-
-  /**
-   * Unassigns a command from group(s).
-   * 
-   * @param groups the groups to remove/unassign the command from.
-   */
-  unassign(...groups: string[]) {
-    groups.forEach(g => {
-      this.spawnmon.unassign(g, this);
-    });
   }
 
   /**

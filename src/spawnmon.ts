@@ -26,11 +26,12 @@ export const DEFAULT_GROUP_NAME = 'default';
 export class Spawnmon {
 
   private prevChar;
+  private indexes = [] as Command[];
 
   running: Command[]; // the running commands.
   maxPrefix = 0; // updated before run.
   commands = new Map<string, Command>();
-  groups = new Map<string, string[]>();
+  // groups = new Map<string, string[]>();
 
   options: ISpawnmonOptions;
 
@@ -46,7 +47,6 @@ export class Spawnmon {
 
     if (options.handleSignals)
       this.handleSignals();
-    this.groups.set(DEFAULT_GROUP_NAME, []);
 
     this.options = options;
 
@@ -72,17 +72,12 @@ export class Spawnmon {
    * @param command the command name, alias or instance to get an index for.
    * @param group the group to get the index of if none assumes the default.
    */
-  protected getIndex(command: string | Command, group = DEFAULT_GROUP_NAME) {
+  protected getIndex(command: string | Command) {
 
-    if (command instanceof Command)
-      command = command.name;
+    if (!(command instanceof Command))
+      command = this.get(command);
 
-    const indexes = this.groups.get(group);
-
-    if (!indexes)
-      throw createError(`Group ${group} could NOT be found.`);
-
-    return [indexes.indexOf(command), indexes.length] as [number, number];
+    return [this.indexes.indexOf(command), this.indexes.length] as [number, number];
 
   }
 
@@ -147,7 +142,7 @@ export class Spawnmon {
    * @param command the command to get and format prefix for.
    * @param color the color of the prefix if any.
    */
-  protected getPrefix(command: string | Command, color: Color = this.options.defaultColor, group = DEFAULT_GROUP_NAME) {
+  protected getPrefix(command: string | Command, color: Color = this.options.defaultColor) {
 
     let prefix = '';
     const cmd = this.get(command);
@@ -162,7 +157,7 @@ export class Spawnmon {
       return '';
 
     const template = this.options.prefix;
-    const [index, indexesLen] = this.getIndex(cmd, group);
+    const [index, indexesLen] = this.getIndex(cmd);
     color = cmd.options.color || color;
 
     const map = {
@@ -354,153 +349,33 @@ export class Spawnmon {
   }
 
   /**
-  * Assigns command(s) to a group.
-  * 
-  * @param group the name of the group to set or update.
-  * @param command the command name to set or merge witht the group.
-  * @param merge when true commands are merged with current.
-  */
-  assign(group: string, commands: string, merge?: boolean): this;
-
-  /**
-  * Assigns command(s) to a group.
-  * 
-  * @param group the name of the group to set or update.
-  * @param command the command to set or merge witht the group.
-  * @param merge when true commands are merged with current.
-  */
-  assign(group: string, commands: Command, merge?: boolean): this;
-
-  /**
-   * Assigns command(s) to a group.
+   * Gets commands for a group.
    * 
-   * @param group the name of the group to set or update.
-   * @param commands the command names to set or merge witht the group.
-   * @param merge when true commands are merged with current.
+   * @param groups the groups to get commands for.  
    */
-  assign(group: string, commands: string[], merge?: boolean): this;
+  getGroup(...groups: string[]) {
 
-  /**
-   * Assigns command(s) to a group.
-   * 
-   * @param group the name of the group to set or update.
-   * @param commands the commands to set or merge witht the group.
-   * @param merge when true commands are merged with current.
-   */
-  assign(group: string, commands: Command[], merge?: boolean): this;
+    const found = [] as Command[];
+    const cmds = [...this.commands.values()];
 
-  assign(group: string, commands: string | Command | (string | Command)[], merge = true) {
+    cmds.forEach(cmd => {
+      groups.forEach(g => {
+        if (cmd.options.group.includes(g))
+          found.push(cmd);
+      });
+    });
 
-    if (typeof commands === 'string' || commands instanceof Command)
-      commands = [commands];
-
-    commands = commands.map(cmd => this.get(cmd).name);
-
-    if (merge)
-      commands = [...(this.groups.get(group) || []), ...commands];
-
-    this.groups.set(group, [...commands as string[]]);
-
-    return this;
+    return found;
 
   }
 
   /**
-   * Removes command from default group.
+   * Checks if commands have a specific group.
    * 
-   * @param commands the commands to be filtered/removed.
+   * @param group the group to inpect if exists.
    */
-  unassign(command: string): this;
-
-  /**
-   * Removes command from default group.
-   * 
-   * @param command the commands to be filtered/removed.
-   */
-  unassign(commands: Command): this;
-
-  /**
-   * Removes command names from default group.
-   * 
-   * @param commands the commands to be filtered/removed.
-   */
-  unassign(commands: string[]): this;
-
-  /**
-   * Removes commands from default group.
-   * 
-   * @param commands the commands to be filtered/removed.
-   */
-  unassign(commands: Command[]): this;
-
-  /**
-   * Removes command from group by group name.
-   * 
-   * @param group the group name to be filtered.
-   * @param commands the command to be filtered/removed.
-   */
-  unassign(group: string, commands: string): this;
-
-  /**
-  * Removes command from group by group name.
-  * 
-  * @param group the group name to be filtered.
-  * @param commands the command to be filtered/removed.
-  */
-  unassign(group: string, commands: Command): this;
-
-  /**
-   * Removes commands from group by group name.
-   * 
-   * @param group the group name to be filtered.
-   * @param commands the commands to be filtered/removed.
-   */
-  unassign(group: string, commands: string[]): this;
-
-  /**
-   * Removes commands from group by group name.
-   * 
-   * @param group the group name to be filtered.
-   * @param commands the commands to be filtered/removed.
-   */
-  unassign(group: string, commands: Command[]): this;
-
-  unassign(
-    groupOrCommand: string | Command | (string | Command)[],
-    commands?: string | Command | (string | Command)[]) {
-
-    let groupName = DEFAULT_GROUP_NAME;
-
-    // First arg is a group name.
-    if (typeof groupOrCommand === 'string' && this.groups.get(groupOrCommand)) {
-      groupName = groupOrCommand;
-    }
-    else {
-      commands = groupOrCommand;
-      groupOrCommand = undefined;
-    }
-
-    // ensure the command is of type Array.
-    if (typeof commands !== 'undefined' && !Array.isArray(commands))
-      commands = [commands];
-
-    let grp = this.groups.get(groupName || DEFAULT_GROUP_NAME);
-
-    // At this point we need to have a group
-    if (!grp)
-      throw createError(`Assign failed, group name ${groupOrCommand} is unknown.`);
-
-
-
-
-    // Ensure commands are string.
-    let cmds = commands.map(cmd => this.get(cmd).name);
-
-    cmds = grp.filter(k => !cmds.includes(k));
-
-    this.assign(groupOrCommand as string, cmds);
-
-    return this;
+  hasGroup(group: string) {
+    return !!this.getGroup(group).length;
 
   }
 
@@ -562,7 +437,6 @@ export class Spawnmon {
       commandArgs = undefined;
       nameCmdOrOpts = undefined;
     }
-
 
     let options = nameCmdOrOpts as ICommandOptions;
 
@@ -674,8 +548,10 @@ export class Spawnmon {
 
     const cmd = this.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
 
-    // Add to default create.
-    cmd.assign(DEFAULT_GROUP_NAME);
+    // Add to default group if not already defined
+    // with group.
+    if (!cmd.options.group || !cmd.options.group.length)
+      cmd.assign(DEFAULT_GROUP_NAME);
 
     return cmd;
 
@@ -692,68 +568,31 @@ export class Spawnmon {
     const cmd = this.get(command);
     if (!this.has(cmd))
       return false;
-    [...this.groups.keys()].forEach(k => {
-      const group = this.groups.get(k);
-      this.groups.set(k, group.filter(n => n !== cmd.name));
-    });
     return this.commands.delete(cmd.name);
   }
 
   /**
-   * Runs all commands in default group.
-   */
-  run(): void;
-
-  /**
-    * Runs a command by name.
-    * 
-    * @param command the name of the command to run
-    */
-  run(command: string): void;
-
-  /**
-   * Runs a command by instance.
-   * 
-   * @param command the command instance to run
-   */
-  run(command: Command): void;
-
-  /**
-   * Runs commands by name.
-   * 
-   * @param commands the names of the commands to be run.
-   */
+  * Runs commands by name.
+  * 
+  * @param commands the name of the commands to run in group.
+  */
   run(...commands: string[]): void;
-
-  /**
-   * Runs a commands by instance.
-   * 
-   * @param command the command instances to run
-   */
-  run(...command: Command[]): void;
 
   /**
   * Runs commands by instance.
   * 
-  * @param group the group name to run.
-  * @param commands the name of the commands to run in group.
+  * @param commands the Command instances to run.
   */
-  run(group: string, ...commands: string[]): void;
+  run(...commands: Command[]): void;
 
-  run(group?: string | Command, ...commands: (string | Command)[]) {
+  run(...commands: (string | Command)[]) {
 
-    // If first arg is not a group assume command.
-    if (group instanceof Command || (group && !this.groups.has(group))) {
-      commands.unshift(group);
-      group = undefined;
-    }
-
-    group = group || DEFAULT_GROUP_NAME;
-
-    // If a group is provided use the group's commands.
-    commands = (group && this.groups.has(group as string) ? this.groups.get(group as string) : commands) as string[];
+    if (!commands.length)
+      commands = [...this.commands.values()];
 
     const cmds = commands.map(cmd => this.get(cmd));
+
+    this.indexes = [...cmds];
 
     this.setMaxPrefix(cmds);
 
@@ -764,8 +603,23 @@ export class Spawnmon {
 
   }
 
+  /**
+   * Runs by group name(s).
+   * 
+   * @param group a group to run.
+   * @param groups additional groups to be run.
+   */
   runGroup(group: string, ...groups: string[]) {
-
+    groups.unshift(group);
+    const commands = groups.reduce((a, c) => {
+      if (!this.hasGroup(c))
+        throw createError(`Failed to lookup commands for unknown group ${c}.`);
+      const cmds = this.getGroup(c);
+      return [...a, ...cmds];
+    }, []);
+    if (!commands.length)
+      return;
+    this.run(...commands);
   }
 
   /**

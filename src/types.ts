@@ -22,6 +22,7 @@ export type TransformHandler = (line: string | Buffer | Error, metadata?: ITrans
 export interface ICommandOptions extends SpawnOptions {
   command: string;
   as?: string;
+  group?: string | string[];
   args?: string[];
   transform?: TransformHandler;
   color?: Color;

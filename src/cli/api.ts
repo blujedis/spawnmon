@@ -267,6 +267,7 @@ export function initApi(argv: any[]) {
     const spawnmon = new Spawnmon(cleaned);
     commands.forEach(opts => {
       const cmd = spawnmon.create(opts);
+    
       // only assign to runnable group is not
       // dependent on parent parent command.
       if (!children.includes(cmd.name))
