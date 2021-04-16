@@ -1,6 +1,6 @@
- __  __                 __      
-/__`|__)/\ |  ||\ ||\/|/  \|\ | 
-.__/|  /~~\|/\|| \||  |\__/| \| 
+<p>
+  <img src="fixtures/logo.png" />
+</p>
 
 Similar to [concurrently](https://www.npmjs.com/package/concurrently) or [npm-run-all](https://www.npmjs.com/package/npm-run-all) but with a few tweaks to make life easier. In particular when a watch stream is idle you can easily run another command or custom callback.
 
