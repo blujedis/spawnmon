@@ -216,6 +216,20 @@ const raw: IHelpItem = {
   default: false
 };
 
+const pipeInput: IHelpItem = {
+  name: `pipeInput`,
+  description: `Pipes stdin to the specified command.`,
+  alias: `i`,
+  examples: [
+    `{app} --pipe-input 1 'rollup -c -w' 'nodemon'`,
+    `{app} -i=1 'rollup -c -w' 'nodemon'`,
+  ],
+  isFlag: true,
+  help: `By piping the stdin stream to a specific command you can still issue commands like "rs" to restart Nodemon and have it function as expected.`,
+  type: 'number',
+  group: 'spawnmon'
+};
+
 //////////////////////////////////////////////////
 // COMMAND OPTIONS 
 //////////////////////////////////////////////////
@@ -304,12 +318,12 @@ const mute: IHelpItem = {
   })
 };
 
-const onTimer: IHelpItem = {
+const onTimeout: IHelpItem = {
   name: `onTimer`,
   description: `Maps process to run on timer idle for process.`,
-  alias: [`o`, `onTimeout`],
+  alias: [`o`],
   examples: [
-    `{app} --on-timer 0:1 'rollup -c -w' 'echo "rollup idle"'`,
+    `{app} --on-timeout 0:1 'rollup -c -w' 'echo "rollup idle"'`,
     `{app} -o 1 'rollup -c -w' 'echo "rollup idle"'`,
     `{app} -o 0:1:2500 'rollup -c -w' 'echo "rollup idle"'`
   ],
@@ -330,12 +344,12 @@ const onTimer: IHelpItem = {
   })
 };
 
-const onPinger: IHelpItem = {
+const onConnect: IHelpItem = {
   name: `onPinger`,
   description: `Enables running command after ping successfully connects.`,
-  alias: [`e`, 'onConnect'],
+  alias: [`e`],
   examples: [
-    `{app} --on-pinged 0:1 'react-scripts start' 'electron .'`,
+    `{app} --on-connect 0:1 'react-scripts start' 'electron .'`,
     `{app} -e 0:1:10 'electron .' 'react-scripts start'`
   ],
   isFlag: true,
@@ -356,13 +370,13 @@ const onPinger: IHelpItem = {
 
 };
 
-const onPingerAddress: IHelpItem = {
+const onConnectAddress: IHelpItem = {
   name: `onPingerAddress`,
   description: `Specifies the host and port for socket/ping.`,
-  alias: [`r`, 'onConnectAddress'],
+  alias: [`r`],
   examples: [
-    `{app} --on-pinger-address 127.0.0.1 'react-scripts start' 'electron .'`,
-    `{app} -r 127.0.0.1:5000'electron .' 'react-scripts start'`
+    `{app} --on-connect-address 127.0.0.1 'react-scripts start' 'electron .'`,
+    `{app} -r 127.0.0.1:5000 'electron .' 'react-scripts start'`
   ],
   isFlag: true,
   help: `When using onPinger you can set the address in the format of host:port. Example 127.0.0.1:3000. The default host is 127.0.0.1 and the default port is 3000.`,
@@ -394,9 +408,10 @@ const configs = {
   color,
   delay,
   mute,
-  onTimer,
-  onPinger,
-  onPingerAddress
+  onTimeout,
+  onConnect,
+  onConnectAddress,
+  pipeInput
 };
 
 export { configs, usage, logo };

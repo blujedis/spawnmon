@@ -17,7 +17,7 @@ import { StyleFunction } from 'ansi-colors';
 type PaddingKey = 'top' | 'bottom' | 'both' | 'none';
 
 const { name, ...pkg } =
-  JSON.parse(readFileSync(join(__dirname, '../../package.json')).toString());
+  JSON.parse(readFileSync(join(__dirname, '../../../package.json')).toString());
 
 const DEFAULT_MAP = {
   app: name,
@@ -262,16 +262,11 @@ export function initApi(argv: any[]) {
   };
 
   const run = () => {
-    const { commands, children, options } = config;
+    const { commands, options } = config;
     const cleaned = filterOptions([...aliases, 'version'], options);
     const spawnmon = new Spawnmon(cleaned);
     commands.forEach(opts => {
-      const cmd = spawnmon.create(opts);
-    
-      // only assign to runnable group is not
-      // dependent on parent parent command.
-      if (!children.includes(cmd.name))
-        cmd.assign(DEFAULT_GROUP_NAME);
+      spawnmon.add(opts);
     });
     spawnmon.run();
   };

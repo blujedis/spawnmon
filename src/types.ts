@@ -1,5 +1,6 @@
 import { SpawnOptions, ProcessEnvOptions } from 'child_process';
 import { SocketConstructorOpts } from 'net';
+import { Command } from './command';
 import { Pinger } from './pinger';
 import { SimpleTimer } from './timer';
 
@@ -31,6 +32,7 @@ export interface ICommandOptions extends SpawnOptions {
   delay?: number;
   pinger?: IPingerOptions | PingerHandler;
   timer?: ISimpleTimerOptions | SimpleTimerHandler;
+  runnable?: boolean;
 }
 
 export interface ISpawnmonOptions extends ProcessEnvOptions {
@@ -45,6 +47,7 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
   handleSignals?: boolean;        // when true handles SIGINT, SIGTERM, SIGHUP signals...
   raw?: boolean;                  // when true logging is output without formatting.
   maxProcesses?: number;          // the max number of spawned child processes. 
+  pipeInput?: string | Command;             // pipes stdin to specific input of command.
   onTimestamp?: () => string;     // user defined func to get timestamps. 
 }
 

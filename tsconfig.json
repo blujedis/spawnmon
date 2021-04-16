@@ -3,7 +3,7 @@
     "module": "CommonJS",
     "target": "ESNext",
     "rootDir": "src",
-    "outDir": "dist",
+    "outDir": "dist/cjs",
     "resolveJsonModule": true,
     "sourceMap": true,
     "moduleResolution": "node",
@@ -11,11 +11,12 @@
     "esModuleInterop": true,
     "downlevelIteration": true,
     "declaration": true,
-    "declarationDir": "dist"
+    "declarationDir": "dist/cjs"
   },
   "include": [
-    "./src"
-, "temp.js"  ],
+    "./src",
+    "temp.js"
+  ],
   "exclude": [
     "node_modules",
     "src/temp/**/*"

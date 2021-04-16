@@ -145,7 +145,8 @@ export function toCommands(commands: string[], options?: Record<string, any>) {
       delay: undefined as number,
       mute: undefined as boolean,
       timer: undefined as any,
-      pinger: undefined as any
+      pinger: undefined as any,
+      runnable: true
     };
   });
 
@@ -162,18 +163,38 @@ export function toCommands(commands: string[], options?: Record<string, any>) {
 
   _commands = _commands.map((cmd, index) => {
 
-    const [tSource, tTarget, interval] = getOpts('onTimer', index);
-    const [pSource, pTarget, retries] = getOpts('onPinger', index);
-    const [host, port] = getOpts('onPingerAddress', index);
+    const [tTarget, interval] = getOpts('onTimeout', index);
+    const [pTarget, retries] = getOpts('onConnect', index);
+    const [host, port] = getOpts('onConnectAddress', index);
 
-    const timerChild = getCmdName(tTarget);
-    const pingerChild = getCmdName(pTarget);
+    const timerSource = getCmdName(index);
+    const timerTarget = getCmdName(tTarget);
 
-    if (timerChild)
-      children.push(timerChild);
+    const pingerSource = getCmdName(index);
+    const pingerTarget = getCmdName(pTarget);
 
-    if (pingerChild)
-      children.push(pingerChild);
+    let timer;
+    let pinger;
+
+    if (timerSource && timerTarget) {
+      children.push(tTarget);
+      timer = {
+        name: timerSource,
+        target: timerTarget,
+        interval
+      };
+    }
+
+    if (pingerSource && pingerTarget) {
+      children.push(pTarget);
+      pinger = {
+        name: pingerSource,
+        target: pingerTarget,
+        host,
+        port,
+        retries
+      };
+    }
 
     cmd = {
       ...cmd,
@@ -181,28 +202,17 @@ export function toCommands(commands: string[], options?: Record<string, any>) {
       color: getOpts('color', index).shift(),
       delay: getOpts('delay', index).shift(),
       mute: getOpts('mute', index).shift(),
-      timer: {
-        name: getCmdName(tSource),
-        target: getCmdName(tTarget),
-        interval
-      },
-      pinger: {
-        name: getCmdName(pSource),
-        target: getCmdName(pTarget),
-        host,
-        port,
-        retries
-      }
+      timer,
+      pinger
     };
 
     return cmd;
 
   });
 
-  return {
-    commands: _commands,
-    children: children
-  };
+  children.forEach(index => _commands[index].runnable = false);
+
+  return _commands;
 
 }
 
@@ -216,27 +226,40 @@ export function toConfig(parsed: Arguments) {
 
 
   const {
-    _, color, delay, mute, onTimer, version,
-    onPinger, onPingerAddress, group,
+    _, color, delay, mute, onTimeout, version,
+    onConnect, onConnectAddress, group,
     ...options
   } = parsed;
+
+  // Ensure group key is set for 
+  // prefix key.
+  if (group) {
+    if (options.prefix)
+      options.prefix = options.prefix.replace(/{.+}/, '{group}');
+    else
+      options.prefix = '[{group}]';
+    options.p = options.prefix; // no really needed but...
+  }
 
   const extended = {
     group,
     color,
     delay,
     mute,
-    onTimer,
-    onPinger,
-    onPingerAddress
+    onTimeout,
+    onConnect,
+    onConnectAddress
   };
 
-  const { commands, children } =
-    toCommands(_, extended) as { children: string[], commands: ICommandOptions[] };
+  const commands = toCommands(_, extended) as ICommandOptions[];
+
+  // need to convert pipeInput to command name
+  // now that we have the commands present.
+  if (typeof options.pipeInput !== 'undefined')
+    options.pipeInput = commands[options.pipeInput].as;
 
   return {
     commands,
-    children,
     options: options as ISpawnmonOptions,
   };
 

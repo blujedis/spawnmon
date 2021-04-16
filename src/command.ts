@@ -15,7 +15,8 @@ const COMMAND_DEFAULTS: ICommandOptions = {
   command: '',
   args: [],
   condensed: false,
-  delay: 0
+  delay: 0,
+  runnable: true
 };
 
 export class Command {
@@ -142,8 +143,8 @@ export class Command {
       fromEvent<Error>(input as ChildProcess, 'error')
         .subscribe(err => {
           // DO NOT allow muting of errors.
-          this.process = undefined;
-          this.log(err, true);
+          // this.process = undefined;
+          this.log(err, false, true);
         });
     }
 
@@ -152,8 +153,8 @@ export class Command {
         .subscribe(([code, signal]) => {
           // if not muted and not handled signal output.
           if (!this.options.mute && !['SIGTERM', 'SIGINT', 'SIGHUP'].includes(signal))
-            this.log(`${this.name} exited with ${signal}`);
-          this.process = undefined;
+            this.log(`${this.name} exited with code ${code}`, false, true);
+          this.kill(signal);
         });
     }
 
@@ -202,7 +203,7 @@ export class Command {
 
       // If pinger contains a target command bind it.
       if (typeof pinger === 'object' && pinger.target)
-        this.onPinger(pinger.target);
+        this.onConnect(pinger.target);
 
     }
 
@@ -214,7 +215,7 @@ export class Command {
 
       // If timer contains a target command bind it.
       if (typeof timer === 'object' && timer.target)
-        this.onTimer(timer.target);
+        this.onTimeout(timer.target);
 
     }
 
@@ -260,13 +261,13 @@ export class Command {
    * Log response from subscriptions.
    * 
    * @param data the data to be logged from the response.
-   * @param shouldKill variable indicating Spawnmon should kill children.
    * @param shouldUpdate when true should update the timer which watches for idle commands
+   * @param stopTimer whether to stop update timer.
    */
-  log(data: string | Error, shouldKill = false, shouldUpdate = true) {
+  log(data: string | Error, shouldUpdate = true, stopTimer = false) {
     if (shouldUpdate)
-      this.updateTimer(data, shouldKill);
-    this.spawnmon.log(data, this, shouldKill);
+      this.updateTimer(data, stopTimer);
+    this.spawnmon.log(data, this);
   }
 
   /**
@@ -283,14 +284,30 @@ export class Command {
     return this;
   }
 
+  /**
+   * Mute's output for this command.
+   */
   mute() {
     this.options.mute = true;
     return this;
   }
 
+  /**
+   * Unmute's output for this command.
+   */
   unmute() {
     this.options.mute = false;
     return this;
+  }
+
+  /**
+   * When true calling run this command is auto runnable, when false
+   * the command name must be manually called.
+   * 
+   * @param state the auto runnable state.
+   */
+  runnable(state: boolean) {
+    this.options.runnable = state;
   }
 
   /**
@@ -320,7 +337,7 @@ export class Command {
    * 
    * @param options the timer options to be set.
    */
-  setTimer(options: ISimpleTimerOptions, timeout?: number): this;
+  setTimeout(options: ISimpleTimerOptions, timeout?: number): this;
 
   /**
    * Sets timer interval and timeout options.
@@ -328,9 +345,9 @@ export class Command {
    * @param interval the timer options to be set.
    * @param timeout the timeout used to abort timer.
    */
-  setTimer(interval: ISimpleTimerOptions, timeout?: number): this;
+  setTimeout(interval: ISimpleTimerOptions, timeout?: number): this;
 
-  setTimer(optionsOrInterval: ISimpleTimerOptions, timeout?: number) {
+  setTimeout(optionsOrInterval: ISimpleTimerOptions, timeout?: number) {
 
     let options = optionsOrInterval as ISimpleTimerOptions;
 
@@ -351,7 +368,7 @@ export class Command {
    * 
    * @param options the pinger options to be set.
    */
-  setPinger(options: IPingerOptions): this;
+  setConnect(options: IPingerOptions): this;
 
   /**
    * Sets host, port and attempt options for pinger.
@@ -360,9 +377,9 @@ export class Command {
    * @param port the host's port.
    * @param attempts the number of atempts.
    */
-  setPinger(host: string, port?: number, attempts?: number): this;
+  setConnect(host: string, port?: number, attempts?: number): this;
 
-  setPinger(optionsOrHost: string | IPingerOptions, port?: number, attempts?: number) {
+  setConnect(optionsOrHost: string | IPingerOptions, port?: number, attempts?: number) {
 
     let options = optionsOrHost as IPingerOptions;
 
@@ -383,23 +400,23 @@ export class Command {
    * 
    * @param command a known command to be pinged.
    */
-  onPinger(command: string): this;
+  onConnect(command: string): this;
 
   /**
    * Sets a known command to be pinged.
    * 
    * @param command a known command to be pinged.
    */
-  onPinger(command: Command): this;
+  onConnect(command: Command): this;
 
   /**
    * Sets a custom handler to be called on ping connected.
    * 
    * @param command a known command to be pinged.
    */
-  onPinger(handler: PingerHandler): this;
+  onConnect(handler: PingerHandler): this;
 
-  onPinger(handlerCmdOrHost: string | Command | PingerHandler) {
+  onConnect(handlerCmdOrHost: string | Command | PingerHandler) {
 
     let handler = handlerCmdOrHost as PingerHandler;
 
@@ -427,23 +444,23 @@ export class Command {
    * 
    * @param command a known command to be called on timer idle.
    */
-  onTimer(command: string): this;
+  onTimeout(command: string): this;
 
   /**
    * Calls known command when timer is idle.
    * 
    * @param command a known command to be called on timer idle.
    */
-  onTimer(command: Command): this;
+  onTimeout(command: Command): this;
 
   /**
    * Calls the defined handler when timer is idle.
    * 
    * @param handler a timer handler to be called.
    */
-  onTimer(handler: SimpleTimerHandler): this;
+  onTimeout(handler: SimpleTimerHandler): this;
 
-  onTimer(handlerOrCommand: string | Command | SimpleTimerHandler) {
+  onTimeout(handlerOrCommand: string | Command | SimpleTimerHandler) {
 
     let handler = handlerOrCommand as SimpleTimerHandler;
 
@@ -511,7 +528,7 @@ export class Command {
     if (!this.spawnmonChild)
       this.spawnmonChild = new Spawnmon({ ...this.spawnmon.options });
 
-    const cmd = this.spawnmonChild.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
+    const cmd = this.spawnmonChild.add(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
 
     // update with this command as its parent.
     if (cmd)
@@ -545,16 +562,35 @@ export class Command {
   /**
    * Kills the command if process still exists.
    */
-  kill(signal?: NodeJS.Signals, cb?: (err?: Error) => void) {
+  kill(signal?: NodeJS.Signals) {
+
     // some cleanup not really needed.
     clearTimeout(this.delayTimeoutId);
+
+    if (this.subscriptions.length)
+      this.unsubscribe();
+
     if (this.timer)
       this.timer.stop();
+
     if (this.pinger)
       this.pinger.stop();
-    !!this.process && treekill(this.pid, signal, (err) => {
-      if (cb) cb(err);
+
+    !!this.process && treekill(this.pid, signal as NodeJS.Signals, (err) => {
+
+      if (err) {
+        colorize(err.message, 'red');
+        console.log(err.message);
+      }
+
+      this.process = undefined;
+      this.spawnmon.commands.delete(this.name);
+
+      if (!this.spawnmon.commands.size)
+        process.exit();
+
     });
+
   }
 
 

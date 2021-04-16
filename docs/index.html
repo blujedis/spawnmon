@@ -58,23 +58,21 @@
 	<div class="row">
 		<div class="col-8 col-content">
 			<div class="tsd-panel tsd-typography">
-				<a href="#spawnmon" id="spawnmon" style="color: inherit; text-decoration: none;">
-					<h1>Spawnmon</h1>
-				</a>
+				<hr>
+				<p>/<strong>`|</strong>)/\ |  ||\ ||/|/  |\ |
+				._<em>/|  /~~|/|| ||  |_</em>/| | </p>
 				<p>Similar to <a href="https://www.npmjs.com/package/concurrently">concurrently</a> or <a href="https://www.npmjs.com/package/npm-run-all">npm-run-all</a> but with a few tweaks to make life easier. In particular when a watch stream is idle you can easily run another command or custom callback.</p>
-				<p>Also built in helpers for pinging a socket ensuring it&#39;s live and then firing off another event. This is useful if you want to use Create React App and then fire off a command to connect Electron after it detects CRA is live.</p>
+				<p>Also built in helpers for pinging a socket ensuring it&#39;s live and then firing off another event. Good for connecting say Electron after CRA launches.</p>
 				<a href="#using-cli" id="using-cli" style="color: inherit; text-decoration: none;">
 					<h2>Using CLI</h2>
 				</a>
 				<p>Using the CLI is pretty straight forward and likely similar to what you&#39;ve used in the past. Take note of the examples and help.</p>
-				<a href="#show-help" id="show-help" style="color: inherit; text-decoration: none;">
-					<h4>Show Help</h4>
+				<a href="#show-help-or-examples" id="show-help-or-examples" style="color: inherit; text-decoration: none;">
+					<h4>Show Help or Examples</h4>
 				</a>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon -h</span>
 </code></pre>
-				<a href="#show-examples" id="show-examples" style="color: inherit; text-decoration: none;">
-					<h4>Show Examples</h4>
-				</a>
+				<p> <strong>Examples</strong></p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --examples</span>
 </code></pre>
 				<a href="#using-from-command-line" id="using-from-command-line" style="color: inherit; text-decoration: none;">
@@ -84,52 +82,66 @@
 				<p>The following will run rollup then watch for changes and also spin up Create React App.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
-				<a href="#changing-the-prefix" id="changing-the-prefix" style="color: inherit; text-decoration: none;">
-					<h4>Changing the Prefix</h4>
+				<a href="#log-prefix" id="log-prefix" style="color: inherit; text-decoration: none;">
+					<h4>Log Prefix</h4>
 				</a>
-				<p>By default each process is preceded by the index of the spawned command e.g. <strong>[0]</strong> then <strong>[1]</strong> for the second spawned command. This can be changed by setting the <strong>&quot;prefix&quot;</strong> option.</p>
-				<p>The following will change from displaying the index to displaying the command being run.</p>
-				<p>It&#39;s important to note that when using [ or ] in your template you must wrap in quotes.</p>
-				<p>Internally spawnmon will replace <strong>{index|command|pid|timestamp}</strong> with the corresponding value. </p>
+				<p>Internally spawnmon will replace <strong>{index|command|pid|timestamp|group}</strong> with the corresponding value. Pass a template with <strong>{key_from_above}</strong> or without a template. One of those five should work for you.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --prefix </span><span style="color: #A31515">&#039;[{command}]&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
-				<a href="#advanced-features" id="advanced-features" style="color: inherit; text-decoration: none;">
-					<h3>Advanced Features</h3>
+				<a href="#commands-amp-syntax" id="commands-amp-syntax" style="color: inherit; text-decoration: none;">
+					<h3>Commands &amp; Syntax</h3>
 				</a>
-				<p>Spawnmon can run another command after the previous becomes idle or can use the internal socket connection helper to fire a command after a successfully connected ping.</p>
+				<p>Tinkered around with this a fair amount and the best way is to use indexes. For example say you are running two commands.</p>
+				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon </span><span style="color: #A31515">&#039;rollup -c w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
+</code></pre>
+				<p>Now let&#39;s consider chaning the color for the prefix for each. Here&#39;s how you&#39;d do it.</p>
+				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --color cyan,blue </span><span style="color: #A31515">&#039;rollup -c w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
+</code></pre>
+				<p>In the above it assumes the index of the corresponding command is in sequential order but you could also specify as below and you&#39;d get the same output.</p>
+				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --color 1:blue,0:cyan </span><span style="color: #A31515">&#039;rollup -c w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
+</code></pre>
+				<a href="#why-use-indexes-instead-of-command-names" id="why-use-indexes-instead-of-command-names" style="color: inherit; text-decoration: none;">
+					<h4>Why use indexes instead of command names?</h4>
+				</a>
+				<p>You could use the same command more than once, you may also want to group them so that the prefixes reflect the group they belong to. This gets messy and LONG! Using the index of the command keeps it much shorter. </p>
+				<a href="#cool-features" id="cool-features" style="color: inherit; text-decoration: none;">
+					<h3>Cool Features</h3>
+				</a>
+				<p>Spawnmon can run another command after the previous becomes idle or can use the internal socket connection helper to fire a command after a successful ping and connection.</p>
 				<a href="#running-command-after-socket-connection" id="running-command-after-socket-connection" style="color: inherit; text-decoration: none;">
 					<h4>Running Command after Socket Connection</h4>
 				</a>
 				<p>In the below example <strong>&quot;electron&quot;</strong> will only be added to Spawnmon as a runnable command but will not immediatelly be spawned. </p>
-				<p>The format here is <strong>parent-command:child-command:host:port</strong>. By default the host and port are set as below so you do not need to provide those if you are for example pinging create react app.</p>
-				<p>Once Create React App or react-scripts runs it will start pinging. When the socket establishes a connection it will fire up <strong>electron</strong>.</p>
-				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --on-pinger react-scripts:electron:127.0.0.1:3000 </span><span style="color: #A31515">&#039;electron .&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
+				<p>The format here is <strong>parent-index:child-index</strong>. The host and port are set to 127.0.0.1:3000. If you want to change that use also <code>--on-connect-address 127.0.0.1:9000</code> or whatever host and port you need.</p>
+				<p>So here the <strong>2</strong> index command is the <strong>react-scripts</strong> command. Where as <strong>0</strong> is the first or <strong>electron</strong> command. </p>
+				<p>Timing not to your liking? Add a delay <code>--delay 0:1000</code> which would add a 1 second delay to the <strong>electron</strong> command once <strong>react-scripts</strong> calls it.</p>
+				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --on-connect 2:0 </span><span style="color: #A31515">&#039;electron .&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
 				<a href="#running-command-after-parent-is-idle" id="running-command-after-parent-is-idle" style="color: inherit; text-decoration: none;">
 					<h4>Running Command after Parent is Idle</h4>
 				</a>
-				<p>This is not a perfect science as you need some sort of success or idle condition to be sent from the spawned parent. In order to simplify this and not have to create elaborate success conditions the simple timer assumes when the spawned process quits emitting or writing output and it eclipses an interval without changing that it is in idle. Not perfect but works well in many cases. </p>
-				<p>If using this feature programmatically you have much more control over the success or idle condition.</p>
-				<p>The below will output &quot;rollup done!&quot; once <strong>rollup</strong> is idle and watching for changes.</p>
-				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --on-timer rollup:echo </span><span style="color: #A31515">&#039;echo rollup done!&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
+				<p>You can also run something after the output stream becomes idle. In short it stops writing to the console. The time checks if it&#39;s been updated since the previous tick of the interval. Super simple but works fairly well. Not a perfect science but helpful.</p>
+				<p>Programmatically you have much more control on the success or &quot;idle&quot; condition.</p>
+				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --on-timeout 1:0 </span><span style="color: #A31515">&#039;echo rollup done!&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
 				<a href="#programmatic-usage" id="programmatic-usage" style="color: inherit; text-decoration: none;">
 					<h2>Programmatic Usage</h2>
 				</a>
 				<p>As time permits there is much more Spawnmon can do. Here are the basis. However the docs are very detailed, every method has clear comments and typings. You should be able to figure it out in the
 				meantime.</p>
-				<pre><code class="language-js"><span style="color: #0000FF">const</span><span style="color: #000000"> { </span><span style="color: #0070C1">Spawnmon</span><span style="color: #000000">, </span><span style="color: #0070C1">Pinger</span><span style="color: #000000"> } = </span><span style="color: #795E26">require</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;spawnmon&#039;</span><span style="color: #000000">);</span>
+				<pre><code class="language-js"><span style="color: #0000FF">const</span><span style="color: #000000"> { </span><span style="color: #0070C1">Spawnmon</span><span style="color: #000000"> } = </span><span style="color: #795E26">require</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;spawnmon&#039;</span><span style="color: #000000">);</span>
 
 <span style="color: #0000FF">const</span><span style="color: #000000"> </span><span style="color: #0070C1">sm</span><span style="color: #000000"> = </span><span style="color: #0000FF">new</span><span style="color: #000000"> </span><span style="color: #795E26">Spawnmon</span><span style="color: #000000">();</span>
 
 <span style="color: #008000">// Use &quot;create&quot; here without adding to the runnable group.</span>
 <span style="color: #008000">// &quot;add&quot; will create the command and add to group.</span>
-<span style="color: #001080">sm</span><span style="color: #000000">.</span><span style="color: #795E26">create</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;electron&#039;</span><span style="color: #000000">, </span><span style="color: #A31515">&#039;.&#039;</span><span style="color: #000000">);</span>
+<span style="color: #001080">sm</span><span style="color: #000000">.</span><span style="color: #795E26">add</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;electron&#039;</span><span style="color: #000000">, </span><span style="color: #A31515">&#039;.&#039;</span><span style="color: #000000">)</span>
+<span style="color: #000000">  .</span><span style="color: #795E26">runnable</span><span style="color: #000000">(</span><span style="color: #0000FF">false</span><span style="color: #000000">); </span><span style="color: #008000">// runnable just updates so sm.run() doesn&#039;t auto run this command.</span>
 
 <span style="color: #001080">sm</span><span style="color: #000000">.</span><span style="color: #795E26">add</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;rollup&#039;</span><span style="color: #000000">, [</span><span style="color: #A31515">&#039;-c&#039;</span><span style="color: #000000">, </span><span style="color: #A31515">&#039;-w&#039;</span><span style="color: #000000">]});</span>
 
 <span style="color: #001080">sm</span><span style="color: #000000">.</span><span style="color: #795E26">add</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;react-app-rewired&#039;</span><span style="color: #000000">, </span><span style="color: #A31515">&#039;start&#039;</span><span style="color: #000000">)</span>
-<span style="color: #000000">  .</span><span style="color: #795E26">setPinger</span><span style="color: #000000">(() </span><span style="color: #0000FF">=&gt;</span><span style="color: #000000"> {</span>
+<span style="color: #000000">  .</span><span style="color: #795E26">onConnect</span><span style="color: #000000">(() </span><span style="color: #0000FF">=&gt;</span><span style="color: #000000"> {</span>
 <span style="color: #000000">    </span><span style="color: #008000">// maybe launch electron???</span>
 <span style="color: #000000">  });</span>
 
@@ -139,18 +151,13 @@
 <span style="color: #008000">// and run the above &quot;electron&quot; command we</span>
 <span style="color: #008000">// initialized with &quot;create&quot;.</span>
 <span style="color: #001080">sm</span><span style="color: #000000">.</span><span style="color: #795E26">add</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;react-app-rewired&#039;</span><span style="color: #000000">, </span><span style="color: #A31515">&#039;start&#039;</span><span style="color: #000000">)</span>
-<span style="color: #000000">  .</span><span style="color: #795E26">setPinger</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;electron&#039;</span><span style="color: #000000">);</span>
+<span style="color: #000000">  .</span><span style="color: #795E26">onConnect</span><span style="color: #000000">(</span><span style="color: #A31515">&#039;electron&#039;</span><span style="color: #000000">);</span>
 
-<span style="color: #008000">// Again by using &quot;create&quot; for electron only</span>
-<span style="color: #008000">// the rollup and react-app-rewired will run here.</span>
+<span style="color: #008000">// Again by calling .runnable(false) for electron only</span>
+<span style="color: #008000">// rollup and react-app-rewired will run here with </span>
+<span style="color: #008000">// electron firing up after the socket connects.</span>
 <span style="color: #001080">sm</span><span style="color: #000000">.</span><span style="color: #795E26">run</span><span style="color: #000000">();</span>
 </code></pre>
-				<a href="#why-another-concurrently-or-run-all" id="why-another-concurrently-or-run-all" style="color: inherit; text-decoration: none;">
-					<h2>Why Another Concurrently or Run-All?</h2>
-				</a>
-				<p>Main reason was to have something a little more focused on API use, solid Typescript typings and be able to easily run things after watch streams go stale or become idle. </p>
-				<p>Other than that not a ton to be honest, in fact most of these task runners work about the same really. </p>
-				<p>With a little luck, in the end the API for programmatic use might end up hair better.</p>
 				<a href="#docs" id="docs" style="color: inherit; text-decoration: none;">
 					<h2>Docs</h2>
 				</a>

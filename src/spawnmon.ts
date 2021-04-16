@@ -1,3 +1,5 @@
+import { fromEvent, Subscription } from 'rxjs';
+import { map } from 'rxjs/operators';
 import supportsColor from 'supports-color';
 import { Command } from './command';
 import { ISpawnmonOptions, ICommandOptions, Color, PrefixKey } from './types';
@@ -28,10 +30,10 @@ export class Spawnmon {
   private prevChar;
   private indexes = [] as Command[];
 
-  running: Command[]; // the running commands.
   maxPrefix = 0; // updated before run.
   commands = new Map<string, Command>();
-  // groups = new Map<string, string[]>();
+  groups = {} as { [key: string]: Command[] }; // running groups.
+  inputCommand: Command; // the command handling input.
 
   options: ISpawnmonOptions;
 
@@ -107,7 +109,7 @@ export class Spawnmon {
   protected getPrefixKey(): string {
     if (!this.options.prefix)
       return '';
-    return this.options.prefix.match(/index|command|pid|timestamp/g)[0] || '';
+    return this.options.prefix.match(/index|command|pid|timestamp|group/g)[0] || '';
   }
 
   /**
@@ -119,14 +121,24 @@ export class Spawnmon {
    */
   protected setMaxPrefix(commands: (string | Command)[]) {
 
-    // Nothing to do, max prefix is only needed for command labels.
-    if (this.getPrefixKey() !== 'command') {
+    const prefixKey = this.getPrefixKey();
+
+    // Nothing to do, max prefix is only needed
+    // for command and group labels.
+    if (!['command', 'group'].includes(prefixKey)) {
       this.maxPrefix = 0;
       return this.maxPrefix;
     }
 
+    const labels = commands.map(cmd => {
+      const c = this.get(cmd);
+      if (prefixKey === 'command')
+        return c.name;
+      return this.getCommandGroups(c, true);
+    });
+
     // Iterate and get command name longest length.
-    const max = Math.max(0, ...commands.map(cmd => this.get(cmd).name).map(v => v.length));
+    const max = Math.max(0, ...labels.map(v => v.length));
 
     // If calculated max is greater then allowable set to allowable defined in options.
     // otherwise set to the max calculated.
@@ -147,6 +159,8 @@ export class Spawnmon {
     let prefix = '';
     const cmd = this.get(command);
 
+    // If cached no need to calc, all prefix types
+    // can be cached with the exception of timestamp.
     if (cmd.prefixCache)
       return cmd.prefixCache;
 
@@ -164,23 +178,30 @@ export class Spawnmon {
       index: index === -1 ? '-' : index,
       pid: cmd.pid,
       command: cmd.name,
-      timestamp: this.options.onTimestamp()
+      timestamp: this.options.onTimestamp(),
+      group: this.getCommandGroups(cmd, true)
     };
 
-    if (prefixKey !== 'command') {
+    // Just replace template if not group or command.
+    if (!['command', 'group'].includes(prefixKey)) {
       prefix = template.replace(`{${prefixKey}}`, map[prefixKey]) || '';
     }
+
+    // If group or command we need to calculate
+    // and pad if needed.
     else {
 
       const templateChars = template.replace(prefixKey, '');
       const innerLength = Math.max(0, this.maxPrefix - templateChars.length);
 
+      const label = prefixKey === 'command' ? map.command : map.group;
+
       // only one command just use it's full length unless too long.
-      if (indexesLen === 1 && map.command.length <= innerLength) {
-        prefix = map.command;
+      if (indexesLen === 1 && label.length <= innerLength) {
+        prefix = label;
       }
       else {
-        prefix = truncate(map.command, innerLength, '');
+        prefix = truncate(label, innerLength, '');
         const offset = innerLength - prefix.length;
         prefix = this.padPrefix(prefix, offset, this.options.prefixAlign);
       }
@@ -268,39 +289,16 @@ export class Spawnmon {
   }
 
   /**
-  * Outputs data to specified write stream.
-  * 
-  * @param data the data or error to throw to write out to the write stream.
-  * @param shouldKill when true should exist after writing.
-  */
-  async log(data: string | Error, shouldKill?: boolean): Promise<void>;
-
-  /**
    * Outputs data to specified write stream.
    * 
    * @param data the data or error to throw to write out to the write stream.
    * @param command the command instance or name requesting output.
-   * @param shouldKill when true should exist after writing.
    */
-  async log(data: string | Error, command: string | Command, shouldKill?: boolean): Promise<void>;
-
-  async log(data: string | Error, command?: string | Command | boolean, shouldKill = false) {
-
+  async log(data: string | Error, command?: string | Command,) {
     if (data instanceof Error)
       throw data;
-
-    if (typeof command === 'boolean') {
-      shouldKill = command;
-      command = undefined;
-    }
-
     data = this.formatLines(data, command as string | Command);
-
     await this.options.writestream.write(this.prepareOutput(data));
-
-    if (shouldKill)
-      this.kill();
-
   }
 
   /**
@@ -376,7 +374,32 @@ export class Spawnmon {
    */
   hasGroup(group: string) {
     return !!this.getGroup(group).length;
+  }
 
+  /**
+   * Gets the groups the command belongs to..
+   * 
+   * @param command a command to get the group for.
+   */
+  getCommandGroups(command: Command): string[];
+
+  /**
+ * Gets the first group the command belongs to..
+ * 
+ * @param command a command to get the group for.
+ * @param first when true gets only the first group.
+ */
+  getCommandGroups(command: Command, first: true): string;
+  getCommandGroups(command: Command, first = false) {
+    const groups = [] as string[];
+    for (const k in this.groups) {
+      const group = this.groups[k];
+      if (~group.indexOf(command))
+        groups.push(k);
+    }
+    if (first)
+      return groups[0];
+    return groups;
   }
 
   /**
@@ -384,7 +407,7 @@ export class Spawnmon {
    * 
    * @param options the command configuration obtions.
    */
-  init(options: ICommandOptions): Command;
+  add(options: ICommandOptions): Command;
 
   /**
    * Inits existing Command without adding to group or instance.
@@ -394,7 +417,7 @@ export class Spawnmon {
    * @param command a command instance.
    * @param as an optional alias for the command.
    */
-  init(command: Command, as?: string): Command;
+  add(command: Command, as?: string): Command;
 
   /**
     * Inits a new command by args without adding to group or commands.
@@ -403,7 +426,7 @@ export class Spawnmon {
     * @param args the arguments to be pased.
     * @param as an alias name for the command.
     */
-  init(command: string, args?: string | string[], as?: string): Command;
+  add(command: string, args?: string | string[], as?: string): Command;
 
   /**
    * Inits a new command by args without adding to group or commands.
@@ -413,9 +436,9 @@ export class Spawnmon {
    * @param options additional command options.
    * @param as an alias name for the command.
    */
-  init(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
+  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
 
-  init(
+  add(
     nameCmdOrOpts: string | ICommandOptions | Command,
     commandArgs?: string | string[],
     initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
@@ -447,111 +470,14 @@ export class Spawnmon {
     options = {
       command: nameCmdOrOpts as string,
       args: commandArgs as string[],
+      as,
       ...initOptsOrAs as ICommandOptions
     };
 
-    const cmd = new Command({ as, ...options }, this);
-    const aliasOrName = as || cmd.command;
-    cmd.options.as = aliasOrName;
+    const cmd = new Command(options, this);
 
-    return cmd;
-
-  }
-
-  /**
-   * Creates a new command by options object without adding to group.
-   * 
-   * @param options the command configuration obtions.
-   */
-  create(options: ICommandOptions): Command;
-
-  /**
-   * Creates a command by instance without adding to group.
-   * 
-   * @param command a command instance.
-   * @param as an optional alias for the command.
-   */
-  create(command: Command, as?: string): Command;
-
-  /**
-   * Creats a new command by args without adding to group.
-   * 
-   * @param command the command to be executed.
-   * @param args the arguments to be pased.
-   * @param as an alias name for the command.
-   */
-  create(command: string, args?: string | string[], as?: string): Command;
-
-  /**
-    * Creats a new command by args without adding to group.
-    * 
-    * @param command the command to be executed.
-    * @param args the arguments to be pased.
-    * @param options additional command options.
-    * @param as an alias name for the command.
-    */
-  create(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
-
-  create(
-    nameCmdOrOpts: string | ICommandOptions | Command,
-    commandArgs?: string | string[],
-    initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
-    as?: string) {
-
-    const cmd = this.init(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
-
+    // Ensure the command is added to the commands map/collection.
     this.ensure(cmd);
-
-    return cmd;
-
-  }
-
-  /**
-   * Creates a new command and adds to the default group.
-   * 
-   * @param options the command configuration obtions.
-   */
-  add(options: ICommandOptions): Command;
-
-  /**
-   * Adds existing Command to Spawnmon instance and adds to the default group.
-   * 
-   * @param command a command instance.
-   * @param as an optional alias for the command.
-   */
-  add(command: Command, as?: string): Command;
-
-  /**
-  * Creates a new command to the instance and adds to the default group.
-  * 
-  * @param command the command to be executed.
-  * @param args the arguments to be pased.
-  * @param as an alias name for the command.
-  */
-  add(command: string, args?: string | string[], as?: string): Command;
-
-  /**
-   * Creates a new command adds to instance and default group.
-   * 
-   * @param command the command to be executed.
-   * @param args the arguments to be pased.
-   * @param options additional command options.
-   * @param as an alias name for the command.
-   */
-  add(command: string, args?: string | string[], options?: Omit<ICommandOptions, 'command' | 'args'>, as?: string): Command;
-
-  add(
-    nameCmdOrOpts: string | ICommandOptions | Command,
-    commandArgs?: string | string[],
-    initOptsOrAs?: Omit<ICommandOptions, 'command' | 'args'> | string,
-    as?: string) {
-
-    const cmd = this.create(nameCmdOrOpts as any, commandArgs, initOptsOrAs as any, as);
-
-    // Add to default group if not already defined
-    // with group.
-    if (!cmd.options.group || !cmd.options.group.length)
-      cmd.assign(DEFAULT_GROUP_NAME);
 
     return cmd;
 
@@ -572,54 +498,85 @@ export class Spawnmon {
   }
 
   /**
-  * Runs commands by name.
-  * 
-  * @param commands the name of the commands to run in group.
-  */
+    * Runs commands by name.
+    * 
+    * @param commands the name of the commands to run in group.
+    */
   run(...commands: string[]): void;
 
   /**
-  * Runs commands by instance.
-  * 
-  * @param commands the Command instances to run.
-  */
+    * Runs commands by instance.
+    * 
+    * @param commands the Command instances to run.
+    */
   run(...commands: Command[]): void;
 
   run(...commands: (string | Command)[]) {
 
+    // ONlY load runnable commands when not 
+    // statically specified.
     if (!commands.length)
-      commands = [...this.commands.values()];
+      commands = [...this.commands.values()].filter(cmd => cmd.options.runnable);
 
-    const cmds = commands.map(cmd => this.get(cmd));
+    const cmds = commands.map(cmd => {
+
+      cmd = this.get(cmd);
+      const groups = cmd.options.group as string[];
+
+      if (groups && groups.length) {
+        groups.forEach(g => {
+          this.groups[g] = this.groups[g] || [];
+          this.groups[g].push(cmd as Command);
+        });
+      }
+      else {
+        this.groups[DEFAULT_GROUP_NAME] = this.groups[DEFAULT_GROUP_NAME] || [];
+        this.groups[DEFAULT_GROUP_NAME].push(cmd);
+      }
+
+      return cmd;
+
+    });
 
     this.indexes = [...cmds];
 
     this.setMaxPrefix(cmds);
 
+    // check if should handle input and subscribe.
+    if (this.options.pipeInput)
+      this.handleInput(this.options.pipeInput);
+
     // Run each command.
     cmds.forEach(cmd => cmd.run());
-
-    this.running = cmds;
 
   }
 
   /**
    * Runs by group name(s).
    * 
-   * @param group a group to run.
    * @param groups additional groups to be run.
    */
-  runGroup(group: string, ...groups: string[]) {
-    groups.unshift(group);
+  runGroup(...groups: string[]) {
+
+    if (!groups.length)
+      throw createError(`At least one group must be specified to run groups.`);
+
     const commands = groups.reduce((a, c) => {
+
       if (!this.hasGroup(c))
         throw createError(`Failed to lookup commands for unknown group ${c}.`);
+
       const cmds = this.getGroup(c);
+
       return [...a, ...cmds];
-    }, []);
+
+    }, [] as Command[]);
+
     if (!commands.length)
       return;
+
     this.run(...commands);
+
   }
 
   /**
@@ -638,8 +595,27 @@ export class Spawnmon {
   kill(...commands: Command[])
 
   kill(...commands: (string | Command)[]) {
-    const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.running];
-    cmds.forEach(cmd => cmd.kill());
+    const cmds = commands.length ? commands.map(c => this.get(c)) : [...this.indexes];
+    cmds.forEach(cmd => {
+      cmd.kill();
+    });
+  }
+
+  handleInput(command: string | Command) {
+    const cmd = this.get(command);
+    const subscription = fromEvent(process.stdin, 'data')
+      .pipe(map(data => data.toString()))
+      .subscribe(data => {
+        const name = (cmd && cmd.name) || 'anonymous';
+        if (!cmd || !cmd.stdin)
+          throw createError(`Cannot pipe input stream, command ${name} unknown or has not stdin currently open.`);
+        cmd.stdin.write(data);
+      });
+    // push the subscription to command so 
+    // it can be unsubscribed.
+    if (cmd)
+      cmd.subscriptions.push(subscription);
+    return this;
   }
 
   /**
@@ -647,19 +623,30 @@ export class Spawnmon {
    */
   handleSignals() {
     const signals = ['SIGINT', 'SIGHUP', 'SIGTERM'] as NodeJS.Signals[];
+
     signals.forEach(signal => {
+
       process.on(signal, () => {
+
         const lines = [];
+
         [...this.commands.values()].forEach(cmd => {
           lines.push(colorize(`${cmd.name} recived signal ${signal}.`, 'dim'));
-          cmd.unsubscribe();
+
+          if (cmd.process)
+            cmd.process.emit('close', -9999, signal);
+
         });
         // could write to stdin or line by line but
         // these ends up a bit cleaner in term IMO.
         const output = ('\n' + lines.join('\n'));
-        this.log(output, true);
+
+        this.log(output);
+
       });
+
     });
+
   }
 
 }

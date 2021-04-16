@@ -4,19 +4,18 @@
 
 Similar to [concurrently](https://www.npmjs.com/package/concurrently) or [npm-run-all](https://www.npmjs.com/package/npm-run-all) but with a few tweaks to make life easier. In particular when a watch stream is idle you can easily run another command or custom callback.
 
-Also built in helpers for pinging a socket ensuring it's live and then firing off another event. This is useful if you want to use Create React App and then fire off a command to connect Electron after it detects CRA is live.
+Also built in helpers for pinging a socket ensuring it's live and then firing off another event. Good for connecting say Electron after CRA launches.
 
 ## Using CLI
 
 Using the CLI is pretty straight forward and likely similar to what you've used in the past. Take note of the examples and help.
 
-#### Show Help
+#### Show Help or Examples
 
 ```sh
 $ spawnmon -h
 ```
-
-#### Show Examples
+ **Examples**
 
 ```sh
 $ spawnmon --examples
@@ -32,46 +31,64 @@ The following will run rollup then watch for changes and also spin up Create Rea
 $ spawnmon 'rollup -c -w' 'react-scripts start'
 ```
 
-#### Changing the Prefix
+#### Log Prefix
 
-By default each process is preceded by the index of the spawned command e.g. **[0]** then **[1]** for the second spawned command. This can be changed by setting the **"prefix"** option.
-
-The following will change from displaying the index to displaying the command being run.
-
-It's important to note that when using [ or ] in your template you must wrap in quotes.
-
-Internally spawnmon will replace **{index|command|pid|timestamp}** with the corresponding value. 
+Internally spawnmon will replace **{index|command|pid|timestamp|group}** with the corresponding value. Pass a template with **{key_from_above}** or without a template. One of those five should work for you.
 
 ```sh
 $ spawnmon --prefix '[{command}]' 'rollup -c -w' 'react-scripts start'
 ```
 
-### Advanced Features
+### Commands & Syntax
 
-Spawnmon can run another command after the previous becomes idle or can use the internal socket connection helper to fire a command after a successfully connected ping.
+Tinkered around with this a fair amount and the best way is to use indexes. For example say you are running two commands.
+
+```sh
+$ spawnmon 'rollup -c w' 'react-scripts start'
+```
+
+Now let's consider chaning the color for the prefix for each. Here's how you'd do it.
+
+```sh
+$ spawnmon --color cyan,blue 'rollup -c w' 'react-scripts start'
+```
+
+In the above it assumes the index of the corresponding command is in sequential order but you could also specify as below and you'd get the same output.
+
+```sh
+$ spawnmon --color 1:blue,0:cyan 'rollup -c w' 'react-scripts start'
+```
+
+#### Why use indexes instead of command names?
+
+You could use the same command more than once, you may also want to group them so that the prefixes reflect the group they belong to. This gets messy and LONG! Using the index of the command keeps it much shorter. 
+
+### Cool Features
+
+Spawnmon can run another command after the previous becomes idle or can use the internal socket connection helper to fire a command after a successful ping and connection.
 
 #### Running Command after Socket Connection
 
 In the below example **"electron"** will only be added to Spawnmon as a runnable command but will not immediatelly be spawned. 
 
-The format here is **parent-command:child-command:host:port**. By default the host and port are set as below so you do not need to provide those if you are for example pinging create react app.
+The format here is **parent-index:child-index**. The host and port are set to 127.0.0.1:3000. If you want to change that use also <code>--on-connect-address 127.0.0.1:9000</code> or whatever host and port you need.
 
-Once Create React App or react-scripts runs it will start pinging. When the socket establishes a connection it will fire up **electron**.
+So here the **2** index command is the **react-scripts** command. Where as **0** is the first or **electron** command. 
+
+Timing not to your liking? Add a delay <code>--delay 0:1000</code> which would add a 1 second delay to the **electron** command once **react-scripts** calls it.
 
 ```sh
-$ spawnmon --on-pinger react-scripts:electron:127.0.0.1:3000 'electron .' 'rollup -c -w' 'react-scripts start'
+$ spawnmon --on-connect 2:0 'electron .' 'rollup -c -w' 'react-scripts start'
 ```
 
 #### Running Command after Parent is Idle
 
-This is not a perfect science as you need some sort of success or idle condition to be sent from the spawned parent. In order to simplify this and not have to create elaborate success conditions the simple timer assumes when the spawned process quits emitting or writing output and it eclipses an interval without changing that it is in idle. Not perfect but works well in many cases. 
+You can also run something after the output stream becomes idle. In short it stops writing to the console. The time checks if it's been updated since the previous tick of the interval. Super simple but works fairly well. Not a perfect science but helpful.
 
-If using this feature programmatically you have much more control over the success or idle condition.
-
-The below will output "rollup done!" once **rollup** is idle and watching for changes.
+Programmatically you have much more control on the success or "idle" condition.
 
 ```sh
-$ spawnmon --on-timer rollup:echo 'echo rollup done!' 'rollup -c -w' 'react-scripts start'
+$ spawnmon --on-timeout 1:0 'echo rollup done!' 'rollup -c -w' 'react-scripts start'
 ```
 
 ## Programmatic Usage
@@ -80,18 +97,19 @@ As time permits there is much more Spawnmon can do. Here are the basis. However 
 meantime.
 
 ```js
-const { Spawnmon, Pinger } = require('spawnmon');
+const { Spawnmon } = require('spawnmon');
 
 const sm = new Spawnmon();
 
 // Use "create" here without adding to the runnable group.
 // "add" will create the command and add to group.
-sm.create('electron', '.');
+sm.add('electron', '.')
+  .runnable(false); // runnable just updates so sm.run() doesn't auto run this command.
 
 sm.add('rollup', ['-c', '-w']});
 
 sm.add('react-app-rewired', 'start')
-  .setPinger(() => {
+  .onConnect(() => {
     // maybe launch electron???
   });
 
@@ -101,20 +119,13 @@ sm.add('react-app-rewired', 'start')
 // and run the above "electron" command we
 // initialized with "create".
 sm.add('react-app-rewired', 'start')
-  .setPinger('electron');
+  .onConnect('electron');
 
-// Again by using "create" for electron only
-// the rollup and react-app-rewired will run here.
+// Again by calling .runnable(false) for electron only
+// rollup and react-app-rewired will run here with 
+// electron firing up after the socket connects.
 sm.run();
 ```
-
-## Why Another Concurrently or Run-All?
-
-Main reason was to have something a little more focused on API use, solid Typescript typings and be able to easily run things after watch streams go stale or become idle. 
-
-Other than that not a ton to be honest, in fact most of these task runners work about the same really. 
-
-With a little luck, in the end the API for programmatic use might end up hair better.
 
 ## Docs
 

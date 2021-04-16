@@ -1,16 +1,17 @@
 {
   "name": "spawnmon",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Utility for running concurrent child processes during development.",
-  "main": "dist/index",
-  "types": "dist/index.d.ts",
+  "main": "dist/cjs/index",
+  "module": "dist/esm/index",
+  "types": "dist/cjs/index.d.ts",
   "bin": {
     "spawnmon": "bin/cli"
   },
   "scripts": {
     "clean": "rimraf dist/",
-    "copy": "cp ./src/cli/logo.txt dist/cli",
-    "build": "tsc -b",
+    "copy": "cp ./src/cli/logo.txt dist/cjs/cli/logo.txt && cp ./src/cli/logo.txt dist/esm/cli/logo.txt",
+    "build": "tsc -b && tsc --project tsconfig.esm.json",
     "watch": "tsc -b -w",
     "docs": "typedoc ./src --options ./typedoc.json  && touch ./docs/.nojekyll",
     "precommit": "npm run clean && npm run build && npm run copy && npm run docs",
