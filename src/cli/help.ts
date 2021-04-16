@@ -299,7 +299,7 @@ const delay: IHelpItem = {
 };
 
 const mute: IHelpItem = {
-  name: `raw`,
+  name: `mute`,
   description: `Mutes the output of a given spawned process.`,
   alias: `u`,
   examples: [
@@ -319,7 +319,7 @@ const mute: IHelpItem = {
 };
 
 const onTimeout: IHelpItem = {
-  name: `onTimer`,
+  name: `onTimeout`,
   description: `Maps process to run on timer idle for process.`,
   alias: [`o`],
   examples: [
@@ -345,7 +345,7 @@ const onTimeout: IHelpItem = {
 };
 
 const onConnect: IHelpItem = {
-  name: `onPinger`,
+  name: `onConnect`,
   description: `Enables running command after ping successfully connects.`,
   alias: [`e`],
   examples: [
@@ -371,7 +371,7 @@ const onConnect: IHelpItem = {
 };
 
 const onConnectAddress: IHelpItem = {
-  name: `onPingerAddress`,
+  name: `onConnectAddress`,
   description: `Specifies the host and port for socket/ping.`,
   alias: [`r`],
   examples: [

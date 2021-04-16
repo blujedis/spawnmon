@@ -1,6 +1,6 @@
 {
   "name": "spawnmon",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Utility for running concurrent child processes during development.",
   "main": "dist/cjs/index",
   "module": "dist/esm/index",
