@@ -99,6 +99,29 @@ Programmatically you have much more control on the success or "idle" condition.
 $ spawnmon --on-timeout 1:0 'echo rollup done!' 'rollup -c -w' 'react-scripts start'
 ```
 
+## Options
+
+The screenshot below is a representation of running <code>spawnmon -h</code>
+
+<p>
+  <img src="https://github.com/blujedis/spawnmon/blob/main/fixtures/options.png" />
+</p>
+
+### See More in Docs
+
+[Spawnmon Instance Options](https://blujedis.github.io/spawnmon/interfaces/types.ispawnmonoptions.html)
+
+[Command Options](https://blujedis.github.io/spawnmon/interfaces/types.icommandoptions.html)
+
+## Examples
+
+Note I would urge you to run <code>spawnmon --examples</code> as things have changed or been tweaked these keep changing but the syntax is reasonably set at this point. Just keep that in mind. The below for brevity only shows command examples. Run the examples to get to get the full list.
+
+<p>
+  <img src="https://github.com/blujedis/spawnmon/blob/main/fixtures/command.png" />
+</p>
+
+
 ## Programmatic Usage
 
 As time permits there is much more Spawnmon can do. Here are the basis. However the docs are very detailed, every method has clear comments and typings. You should be able to figure it out in the
