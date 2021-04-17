@@ -1,6 +1,6 @@
 {
   "name": "spawnmon",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Utility for running concurrent child processes during development.",
   "main": "dist/cjs/index",
   "module": "dist/esm/index",
@@ -36,8 +36,16 @@
     "script",
     "scripts"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Blujedi LLC <blujedicorp@gmail.com>",
+  "homepage": "https://github.com/blujedis/spawnmon#readme",
+  "bugs": {
+    "url": "https://github.com/blujedis/spawnmon/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blujedis/spawnmon.git"
+  },
+  "license": "ISC",
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "cli-table3": "^0.6.0",

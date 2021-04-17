@@ -3,8 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toYargsOptions = void 0;
+exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toYargsOptions = exports.parseCommand = exports.escapeRegex = exports.scripts = exports.spawnmonPkg = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
+const fs_1 = require("fs");
+const path_1 = require("path");
+exports.spawnmonPkg = JSON.parse(fs_1.readFileSync(path_1.join(__dirname, '../../../package.json')).toString());
+exports.scripts = JSON.parse(fs_1.readFileSync(path_1.join(process.cwd(), 'package.json')).toString()).scripts;
 const TEMPLATE_EXP = /\{.+?\}/g;
 const helpers = {
     upper: v => changeCase(v, 'upper'),
@@ -16,6 +20,55 @@ const helpers = {
     dot: v => changeCase(v, 'dot'),
     camel: v => changeCase(v, 'camel'),
 };
+/**
+ * Escapes a regexp string.
+ *
+ * @param str the string to escape.
+ */
+function escapeRegex(str) {
+    return str
+        .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
+        .replace(/-/g, '\\x2d');
+}
+exports.escapeRegex = escapeRegex;
+/**
+ * Parses a command looking up wildcards when present.
+ *
+ * @param arg the complete unparsed argument/command.
+ */
+function parseCommand(arg) {
+    const args = arg.trim().match(/('.*?'|".*?"|\S+)/g);
+    const command = args.shift();
+    const isNpm = command === 'npm';
+    // If npm remove "run"
+    if (isNpm)
+        args.shift();
+    const scriptCmd = args[0];
+    const wildIndex = (scriptCmd || '').indexOf('*');
+    if (!scriptCmd || !~wildIndex) {
+        return [{
+                command,
+                args
+            }];
+    }
+    const keys = Object.keys(exports.scripts || {});
+    if (!keys.length)
+        throw createError(`Received script command ${scriptCmd} but no scripts present in package.json.`);
+    const beforeIndex = escapeRegex(scriptCmd.substr(0, wildIndex));
+    const afterIndex = escapeRegex(scriptCmd.substr(wildIndex + 1));
+    const wildExp = new RegExp(`^${beforeIndex}(.*?)${afterIndex}$`);
+    const filtered = keys.filter(v => wildExp.test(v));
+    return filtered.map(s => {
+        const _args = [s, ...args.slice(1)];
+        if (isNpm)
+            _args.unshift('run');
+        return {
+            command,
+            args: _args
+        };
+    });
+}
+exports.parseCommand = parseCommand;
 /**
  * Converts help config objects to Yargs Parser config objects.
  *
@@ -100,58 +153,68 @@ function argsToObj(options) {
  * @param as optional as or labels to run commands "as".
  */
 function toCommands(commands, options) {
-    // Store array of child commands meaning
-    const children = [];
     const normalized = argsToObj(options);
-    let _commands = [...commands].map((v, index) => {
-        const args = v.match(/('.*?'|".*?"|\S+)/g);
-        const command = args.shift();
-        return {
-            command,
-            args,
-            index,
-            as: command + '-' + index,
-            group: undefined,
-            color: undefined,
-            delay: undefined,
-            mute: undefined,
-            timer: undefined,
-            pinger: undefined,
-            runnable: true
-        };
-    });
+    let ctr = 0;
+    let _commands = [...commands].reduce((a, c, groupIndex) => {
+        let parsed = parseCommand(c);
+        const isGroup = parsed.length > 1;
+        const groupIndexLast = ctr + parsed.length - 1;
+        parsed = parsed.map(({ command, args }, index) => {
+            const opts = {
+                command,
+                args,
+                index: ctr,
+                groupIndex,
+                groupIndexLast,
+                isGroup,
+                as: command + '-' + ctr,
+                runnable: true
+            };
+            ctr += 1;
+            return opts;
+        });
+        return [...a, ...parsed];
+    }, []);
     const getOpts = (key, index) => {
         const typeOpts = normalized[key] || {};
         return (typeOpts[index] || []);
     };
-    const getCmdName = (index) => {
+    const getCmd = (index) => {
         if (!_commands[index])
             return undefined;
-        return _commands[index].as;
+        return _commands[index];
     };
     _commands = _commands.map((cmd, index) => {
         const [tTarget, interval] = getOpts('onTimeout', index);
         const [pTarget, retries] = getOpts('onConnect', index);
         const [host, port] = getOpts('onConnectAddress', index);
-        const timerSource = getCmdName(index);
-        const timerTarget = getCmdName(tTarget);
-        const pingerSource = getCmdName(index);
-        const pingerTarget = getCmdName(pTarget);
+        const timerCmd = getCmd(index);
+        const pingerCmd = getCmd(index);
+        let timerTargetCmd = getCmd(tTarget);
+        let pingerTargetCmd = getCmd(pTarget);
+        // Switch the target to the last 
+        // command index in the group.
+        if (timerTargetCmd?.isGroup)
+            timerTargetCmd = getCmd(timerTargetCmd.groupIndexLast);
+        // Switch the target to the last 
+        // command index in the group.
+        if (pingerTargetCmd?.isGroup)
+            pingerTargetCmd = getCmd(pingerTargetCmd.groupIndexLast);
         let timer;
         let pinger;
-        if (timerSource && timerTarget) {
-            children.push(tTarget);
+        if (timerCmd && timerTargetCmd) {
+            timerTargetCmd.runnable = false;
             timer = {
-                name: timerSource,
-                target: timerTarget,
+                name: timerCmd.as,
+                target: timerTargetCmd.as,
                 interval
             };
         }
-        if (pingerSource && pingerTarget) {
-            children.push(pTarget);
+        if (pingerCmd && pingerTargetCmd) {
+            pingerTargetCmd.runnable = false;
             pinger = {
-                name: pingerSource,
-                target: pingerTarget,
+                name: pingerCmd.as,
+                target: pingerTargetCmd.as,
                 host,
                 port,
                 retries
@@ -159,16 +222,15 @@ function toCommands(commands, options) {
         }
         cmd = {
             ...cmd,
-            group: getOpts('group', index).shift(),
-            color: getOpts('color', index).shift(),
-            delay: getOpts('delay', index).shift(),
-            mute: getOpts('mute', index).shift(),
+            group: getOpts('group', cmd.groupIndex).shift(),
+            color: getOpts('color', cmd.groupIndex).shift(),
+            delay: getOpts('delay', cmd.groupIndex).shift(),
+            mute: getOpts('mute', cmd.groupIndex).shift(),
             timer,
             pinger
         };
         return cmd;
     });
-    children.forEach(index => _commands[index].runnable = false);
     return _commands;
 }
 exports.toCommands = toCommands;
@@ -179,6 +241,8 @@ exports.toCommands = toCommands;
  * @param parsed the minimist parsed arguments.
  */
 function toConfig(parsed) {
+    // console.log(parsed);
+    // process.exit();
     const { _, color, delay, mute, onTimeout, version, onConnect, onConnectAddress, group, ...options } = parsed;
     // Ensure group key is set for 
     // prefix key.
@@ -187,7 +251,7 @@ function toConfig(parsed) {
             options.prefix = options.prefix.replace(/{.+}/, '{group}');
         else
             options.prefix = '[{group}]';
-        options.p = options.prefix; // no really needed but...
+        options.p = options.prefix; // not really needed but...
     }
     const extended = {
         group,
@@ -347,4 +411,19 @@ function createError(errOrMessage) {
     return err;
 }
 exports.createError = createError;
+// const args = v.match(/('.*?'|".*?"|\S+)/g);
+// const command = args.shift() as string;
+// return {
+//   command,
+//   args,
+//   index,
+//   as: command + '-' + index,
+//   group: undefined as string,
+//   color: undefined as string,
+//   delay: undefined as number,
+//   mute: undefined as boolean,
+//   timer: undefined as any,
+//   pinger: undefined as any,
+//   runnable: true
+// };
 //# sourceMappingURL=utils.js.map

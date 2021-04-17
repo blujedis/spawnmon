@@ -287,6 +287,8 @@ const onTimeout = {
         arr[1] = toInt(arr[1]);
         if (arr[2])
             arr[2] = toInt(arr[2]);
+        if (isNaN(arr[0]) || isNaN(arr[1]))
+            return [];
         return arr;
     })
 };
@@ -311,6 +313,8 @@ const onConnect = {
         arr[1] = toInt(arr[1]);
         if (arr[2])
             arr[2] = toInt(arr[2]);
+        if (isNaN(arr[0]) || isNaN(arr[1]))
+            return [];
         return arr;
     })
 };

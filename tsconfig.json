@@ -14,8 +14,7 @@
     "declarationDir": "dist/cjs"
   },
   "include": [
-    "./src",
-    "temp.js"
+    "./src"
   ],
   "exclude": [
     "node_modules",

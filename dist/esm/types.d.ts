@@ -19,13 +19,24 @@ export interface ICommandOptions extends SpawnOptions {
     group?: string | string[];
     args?: string[];
     transform?: TransformHandler;
-    color?: Color;
+    color?: string;
     mute?: boolean;
     condensed?: boolean;
     delay?: number;
     pinger?: IPingerOptions | PingerHandler;
     timer?: ISimpleTimerOptions | SimpleTimerHandler;
     runnable?: boolean;
+    outputExitCode?: boolean;
+}
+export interface ICommandOptionsExt extends ICommandOptions {
+    command: string;
+    args: any[];
+    index: number;
+    groupIndex: number;
+    groupIndexLast: number;
+    isGroup: boolean;
+    timer: ISimpleTimerOptions;
+    pinger: IPingerOptions;
 }
 export interface ISpawnmonOptions extends ProcessEnvOptions {
     writestream?: NodeJS.WritableStream;
@@ -40,6 +51,7 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
     raw?: boolean;
     maxProcesses?: number;
     pipeInput?: string | Command;
+    outputExitCode?: boolean;
     onTimestamp?: () => string;
 }
 export declare type PingerEvent = 'retry' | 'failed' | 'connected' | 'destroyed';

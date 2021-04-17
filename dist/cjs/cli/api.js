@@ -1,4 +1,11 @@
 "use strict";
+/**
+ * The CLI side started out much simpler it
+ * uhhhh grew, need to clean this up into
+ * proper classes so the docs are even readable
+ * works fine but a tran wreck to extend or
+ * manage.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,12 +13,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.initApi = void 0;
 const yargs_parser_1 = __importDefault(require("yargs-parser"));
 const spawnmon_1 = require("../spawnmon");
-const fs_1 = require("fs");
 const table_1 = __importDefault(require("./table"));
 const help_1 = require("./help");
 const utils_1 = require("./utils");
-const path_1 = require("path");
-const { name, ...pkg } = JSON.parse(fs_1.readFileSync(path_1.join(__dirname, '../../../package.json')).toString());
+const { name, ...pkg } = utils_1.spawnmonPkg;
 const DEFAULT_MAP = {
     app: name,
     ...pkg

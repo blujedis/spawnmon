@@ -26,13 +26,25 @@ export interface ICommandOptions extends SpawnOptions {
   group?: string | string[];
   args?: string[];
   transform?: TransformHandler;
-  color?: Color;
+  color?: string;
   mute?: boolean;
   condensed?: boolean;
   delay?: number;
   pinger?: IPingerOptions | PingerHandler;
   timer?: ISimpleTimerOptions | SimpleTimerHandler;
   runnable?: boolean;
+  outputExitCode?: boolean;
+}
+
+export interface ICommandOptionsExt extends ICommandOptions {
+  command: string;
+  args: any[];
+  index: number;
+  groupIndex: number;
+  groupIndexLast: number;
+  isGroup: boolean;
+  timer: ISimpleTimerOptions
+  pinger: IPingerOptions,
 }
 
 export interface ISpawnmonOptions extends ProcessEnvOptions {
@@ -48,6 +60,7 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
   raw?: boolean;                  // when true logging is output without formatting.
   maxProcesses?: number;          // the max number of spawned child processes. 
   pipeInput?: string | Command;             // pipes stdin to specific input of command.
+  outputExitCode?: boolean;       // when true logs "exitied with code" may not want this.
   onTimestamp?: () => string;     // user defined func to get timestamps. 
 }
 

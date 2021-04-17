@@ -22,7 +22,8 @@ const SPAWNMON_DEFAULTS = {
     prefixFill: '.',
     condensed: false,
     handleSignals: true,
-    onTimestamp: utils_1.simpleTimestamp
+    onTimestamp: utils_1.simpleTimestamp,
+    outputExitCode: false
 };
 exports.DEFAULT_GROUP_NAME = 'default';
 class Spawnmon {
@@ -222,6 +223,9 @@ class Spawnmon {
     get pids() {
         return [...this.commands.values()].map(cmd => cmd.pid);
     }
+    async write(data) {
+        return this.options.writestream.write(data);
+    }
     /**
      * Outputs data to specified write stream.
      *
@@ -232,7 +236,7 @@ class Spawnmon {
         if (data instanceof Error)
             throw data;
         data = this.formatLines(data, command);
-        await this.options.writestream.write(this.prepareOutput(data));
+        await this.write(this.prepareOutput(data));
     }
     /**
      * A lookup and normalizer to find command.

@@ -20,7 +20,8 @@ const SPAWNMON_DEFAULTS: ISpawnmonOptions = {
   prefixFill: '.',
   condensed: false,
   handleSignals: true,
-  onTimestamp: simpleTimestamp
+  onTimestamp: simpleTimestamp,
+  outputExitCode: false
 };
 
 export const DEFAULT_GROUP_NAME = 'default';
@@ -288,6 +289,10 @@ export class Spawnmon {
     return [...this.commands.values()].map(cmd => cmd.pid);
   }
 
+  async write(data: string) {
+    return this.options.writestream.write(data);
+  }
+
   /**
    * Outputs data to specified write stream.
    * 
@@ -298,7 +303,7 @@ export class Spawnmon {
     if (data instanceof Error)
       throw data;
     data = this.formatLines(data, command as string | Command);
-    await this.options.writestream.write(this.prepareOutput(data));
+    await this.write(this.prepareOutput(data));
   }
 
   /**

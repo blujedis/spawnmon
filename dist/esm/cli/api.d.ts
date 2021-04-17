@@ -1,3 +1,10 @@
+/**
+ * The CLI side started out much simpler it
+ * uhhhh grew, need to clean this up into
+ * proper classes so the docs are even readable
+ * works fine but a tran wreck to extend or
+ * manage.
+ */
 import { HelpKey } from './help';
 import { StyleFunction } from 'ansi-colors';
 declare type PaddingKey = 'top' | 'bottom' | 'both' | 'none';

@@ -41,13 +41,12 @@ export class Command {
 
   constructor(options: ICommandOptions, spawnmon: Spawnmon, parent?: Command) {
 
-    const { defaultColor, condensed } = spawnmon.options;
+    const { defaultColor, condensed, outputExitCode } = spawnmon.options;
 
     options = {
       color: defaultColor,
       condensed,
-      timer: {},
-      pinger: {},
+      outputExitCode,
       ...options
     };
 
@@ -152,8 +151,10 @@ export class Command {
       fromEvent(input as ChildProcess, 'close')
         .subscribe(([code, signal]) => {
           // if not muted and not handled signal output.
-          if (!this.options.mute && !['SIGTERM', 'SIGINT', 'SIGHUP'].includes(signal))
-            this.log(`${this.name} exited with code ${code}`, false, true);
+          if (!this.options.mute && !['SIGTERM', 'SIGINT', 'SIGHUP'].includes(signal) && this.options.outputExitCode) {
+            const msg = `${this.name} exited with code ${code}\n`;
+            this.spawnmon.options.writestream.write(colorize(msg, 'dim'));
+          }
           this.kill(signal);
         });
     }
@@ -586,6 +587,10 @@ export class Command {
       this.process = undefined;
       this.spawnmon.commands.delete(this.name);
 
+      // If no more commands exit.
+      // perhaps we should create a close
+      // queue instead, sub to that kill when
+      // empty.
       if (!this.spawnmon.commands.size)
         process.exit();
 

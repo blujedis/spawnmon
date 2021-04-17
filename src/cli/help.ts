@@ -1,6 +1,7 @@
 import { stylizer } from './utils';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { createError } from './utils';
 
 const logo = readFileSync(join(__dirname, './logo.txt')).toString().trim();
 
@@ -340,6 +341,8 @@ const onTimeout: IHelpItem = {
     arr[1] = toInt(arr[1]);
     if (arr[2])
       arr[2] = toInt(arr[2]);
+    if (isNaN(arr[0]) || isNaN(arr[1]))
+      return [];
     return arr;
   })
 };
@@ -365,6 +368,8 @@ const onConnect: IHelpItem = {
     arr[1] = toInt(arr[1]);
     if (arr[2])
       arr[2] = toInt(arr[2]);
+    if (isNaN(arr[0]) || isNaN(arr[1]))
+      return [];
     return arr;
   })
 

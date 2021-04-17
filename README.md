@@ -59,6 +59,14 @@ In the above it assumes the index of the corresponding command is in sequential 
 $ spawnmon --color 1:blue,0:cyan 'rollup -c w' 'react-scripts start'
 ```
 
+You can also use globstars in the following manner. This would run anything that begins with **"build:"** for example.
+
+If you use this feature with **onTimeout** or **onConnect** flags just note that the target index will be set to the **last** command in the list. This is because we're filtering or looking up multiple commands. If you don't want this you'll have to specify those commands manually. Just keep in mind there's no **!** char that can be used to filter just one specific command in the group. Maybe we can add that later.
+
+```sh
+$ spawnmon 'npm run build:*'
+```
+
 #### Why use indexes instead of command names?
 
 You could use the same command more than once, you may also want to group them so that the prefixes reflect the group they belong to. This gets messy and LONG! Using the index of the command keeps it much shorter. 

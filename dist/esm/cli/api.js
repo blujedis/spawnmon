@@ -1,11 +1,16 @@
+/**
+ * The CLI side started out much simpler it
+ * uhhhh grew, need to clean this up into
+ * proper classes so the docs are even readable
+ * works fine but a tran wreck to extend or
+ * manage.
+ */
 import yargsParser from 'yargs-parser';
 import { Spawnmon } from '../spawnmon';
-import { readFileSync } from 'fs';
 import table from './table';
 import { configs, logo, usage as helpUsage } from './help';
-import { changeCase, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toYargsOptions, unflag } from './utils';
-import { join } from 'path';
-const { name, ...pkg } = JSON.parse(readFileSync(join(__dirname, '../../../package.json')).toString());
+import { changeCase, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toYargsOptions, unflag, spawnmonPkg } from './utils';
+const { name, ...pkg } = spawnmonPkg;
 const DEFAULT_MAP = {
     app: name,
     ...pkg

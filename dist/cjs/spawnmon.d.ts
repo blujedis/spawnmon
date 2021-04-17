@@ -64,6 +64,7 @@ export declare class Spawnmon {
      * Gets process id's of commands.
      */
     get pids(): number[];
+    write(data: string): Promise<boolean>;
     /**
      * Outputs data to specified write stream.
      *

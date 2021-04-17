@@ -1,6 +1,13 @@
+/**
+ * The CLI side started out much simpler it
+ * uhhhh grew, need to clean this up into
+ * proper classes so the docs are even readable
+ * works fine but a tran wreck to extend or
+ * manage. 
+ */
+
 import yargsParser from 'yargs-parser';
-import { DEFAULT_GROUP_NAME, Spawnmon } from '../spawnmon';
-import { readFileSync } from 'fs';
+import { Spawnmon } from '../spawnmon';
 import table from './table';
 import {
   HelpGroupKey, HelpKey, IHelpItem, configs,
@@ -9,15 +16,13 @@ import {
 import {
   changeCase, filterOptions, simpleFormatter,
   stylizer, toArray, toConfig, toFlag,
-  toYargsOptions, unflag
+  toYargsOptions, unflag, spawnmonPkg
 } from './utils';
-import { join } from 'path';
 import { StyleFunction } from 'ansi-colors';
 
 type PaddingKey = 'top' | 'bottom' | 'both' | 'none';
 
-const { name, ...pkg } =
-  JSON.parse(readFileSync(join(__dirname, '../../../package.json')).toString());
+const { name, ...pkg } = spawnmonPkg;
 
 const DEFAULT_MAP = {
   app: name,

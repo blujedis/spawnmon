@@ -1,9 +1,26 @@
-import yargsParser, { Arguments, Configuration } from 'yargs-parser';
+import { Arguments, Configuration } from 'yargs-parser';
 import { StyleFunction } from 'ansi-colors';
 import { HelpConfigs } from './help';
-import { ICommandOptions, ISpawnmonOptions } from '../types';
+import { ICommandOptions, ICommandOptionsExt, ISpawnmonOptions } from '../types';
 export declare type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
 export declare type ToArrayType = string | boolean | number;
+export declare const spawnmonPkg: any;
+export declare const scripts: any;
+/**
+ * Escapes a regexp string.
+ *
+ * @param str the string to escape.
+ */
+export declare function escapeRegex(str: string): string;
+/**
+ * Parses a command looking up wildcards when present.
+ *
+ * @param arg the complete unparsed argument/command.
+ */
+export declare function parseCommand(arg: string): {
+    command: string;
+    args: string[];
+}[];
 /**
  * Converts help config objects to Yargs Parser config objects.
  *
@@ -18,7 +35,7 @@ export declare function toYargsOptions(items: HelpConfigs, configuration?: Parti
         default: any;
         alias: any;
         coerce: any;
-        configuration: Partial<yargsParser.Configuration>;
+        configuration: Partial<Configuration>;
     };
     aliases: any[];
 };
@@ -28,19 +45,7 @@ export declare function toYargsOptions(items: HelpConfigs, configuration?: Parti
  * @param commands takes string commands to parse.
  * @param as optional as or labels to run commands "as".
  */
-export declare function toCommands(commands: string[], options?: Record<string, any>): {
-    command: string;
-    args: RegExpMatchArray;
-    index: number;
-    as: string;
-    group: string;
-    color: string;
-    delay: number;
-    mute: boolean;
-    timer: any;
-    pinger: any;
-    runnable: boolean;
-}[];
+export declare function toCommands(commands: string[], options?: Record<string, any>): ICommandOptionsExt[];
 /**
  * Parses commands and destructures options into
  * Spawnmon commands and options.
