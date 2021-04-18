@@ -8,12 +8,16 @@
 import yargsParser from 'yargs-parser';
 import { Spawnmon } from '../spawnmon';
 import table from './table';
-import { configs, logo, usage as helpUsage } from './help';
-import { changeCase, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toYargsOptions, unflag, spawnmonPkg } from './utils';
-const { name, ...pkg } = spawnmonPkg;
+import { configs, usage as helpUsage } from './help';
+import { pkg, logo, globalOptions } from './init';
+import { changeCase, filterOptions, simpleFormatter, stylizer, toArray, toConfig, toFlag, toYargsOptions, unflag } from './utils';
+// Strip name here and call it "app"
+// so we don't conflict with the help
+// object.name prop.
+const { name, ...rest } = pkg;
 const DEFAULT_MAP = {
     app: name,
-    ...pkg
+    ...rest
 };
 // Simple api for managing commands.
 export function initApi(argv) {
@@ -193,7 +197,8 @@ export function initApi(argv) {
         return key && hasFlag(firstArg) && hasHelp();
     };
     const run = () => {
-        const { commands, options } = config;
+        let { commands, options } = config;
+        options = { ...globalOptions, ...options };
         const cleaned = filterOptions([...aliases, 'version'], options);
         const spawnmon = new Spawnmon(cleaned);
         commands.forEach(opts => {

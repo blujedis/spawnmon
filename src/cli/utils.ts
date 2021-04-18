@@ -2,18 +2,12 @@
 import { Arguments, Configuration } from 'yargs-parser';
 import ansiColors, { StyleFunction } from 'ansi-colors';
 import { HelpConfigs, IHelpItem } from './help';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { appPkg } from './init';
 import { ICommandOptions, ICommandOptionsExt, ISpawnmonOptions } from '../types';
 
 export type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
 
 export type ToArrayType = string | boolean | number;
-
-export const spawnmonPkg =
-  JSON.parse(readFileSync(join(__dirname, '../../../package.json')).toString());
-
-export const { scripts } = JSON.parse(readFileSync(join(process.cwd(), 'package.json')).toString());
 
 const TEMPLATE_EXP = /\{.+?\}/g;
 
@@ -27,7 +21,6 @@ const helpers = {
   dot: v => changeCase(v, 'dot'),
   camel: v => changeCase(v, 'camel'),
 };
-
 
 /**
  * Escapes a regexp string.
@@ -65,7 +58,7 @@ export function parseCommand(arg: string) {
     }];
   }
 
-  const keys = Object.keys(scripts || {});
+  const keys = Object.keys(appPkg.scripts || {});
 
   if (!keys.length)
     throw createError(`Received script command ${scriptCmd} but no scripts present in package.json.`);
@@ -289,6 +282,7 @@ export function toCommands(commands: string[], options?: Record<string, any>) {
       pinger
     };
 
+    // Merge with global options from package.json config or file config.
     return cmd;
 
   });
@@ -538,19 +532,3 @@ export function createError(errOrMessage: string | Error) {
   err.message = stylizer(err.message, 'red');
   return err;
 }
-
-    // const args = v.match(/('.*?'|".*?"|\S+)/g);
-    // const command = args.shift() as string;
-    // return {
-    //   command,
-    //   args,
-    //   index,
-    //   as: command + '-' + index,
-    //   group: undefined as string,
-    //   color: undefined as string,
-    //   delay: undefined as number,
-    //   mute: undefined as boolean,
-    //   timer: undefined as any,
-    //   pinger: undefined as any,
-    //   runnable: true
-    // };

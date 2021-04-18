@@ -1,8 +1,5 @@
 import ansiColors from 'ansi-colors';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-export const spawnmonPkg = JSON.parse(readFileSync(join(__dirname, '../../../package.json')).toString());
-export const { scripts } = JSON.parse(readFileSync(join(process.cwd(), 'package.json')).toString());
+import { appPkg } from './init';
 const TEMPLATE_EXP = /\{.+?\}/g;
 const helpers = {
     upper: v => changeCase(v, 'upper'),
@@ -44,7 +41,7 @@ export function parseCommand(arg) {
                 args
             }];
     }
-    const keys = Object.keys(scripts || {});
+    const keys = Object.keys(appPkg.scripts || {});
     if (!keys.length)
         throw createError(`Received script command ${scriptCmd} but no scripts present in package.json.`);
     const beforeIndex = escapeRegex(scriptCmd.substr(0, wildIndex));
@@ -220,6 +217,7 @@ export function toCommands(commands, options) {
             timer,
             pinger
         };
+        // Merge with global options from package.json config or file config.
         return cmd;
     });
     return _commands;
@@ -392,19 +390,4 @@ export function createError(errOrMessage) {
     err.message = stylizer(err.message, 'red');
     return err;
 }
-// const args = v.match(/('.*?'|".*?"|\S+)/g);
-// const command = args.shift() as string;
-// return {
-//   command,
-//   args,
-//   index,
-//   as: command + '-' + index,
-//   group: undefined as string,
-//   color: undefined as string,
-//   delay: undefined as number,
-//   mute: undefined as boolean,
-//   timer: undefined as any,
-//   pinger: undefined as any,
-//   runnable: true
-// };
 //# sourceMappingURL=utils.js.map

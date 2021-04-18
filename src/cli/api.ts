@@ -11,22 +11,27 @@ import { Spawnmon } from '../spawnmon';
 import table from './table';
 import {
   HelpGroupKey, HelpKey, IHelpItem, configs,
-  logo, usage as helpUsage
+  usage as helpUsage
 } from './help';
+import { pkg, logo, globalOptions } from './init';
 import {
   changeCase, filterOptions, simpleFormatter,
   stylizer, toArray, toConfig, toFlag,
-  toYargsOptions, unflag, spawnmonPkg
+  toYargsOptions, unflag
 } from './utils';
+
 import { StyleFunction } from 'ansi-colors';
 
 type PaddingKey = 'top' | 'bottom' | 'both' | 'none';
 
-const { name, ...pkg } = spawnmonPkg;
+// Strip name here and call it "app"
+// so we don't conflict with the help
+// object.name prop.
+const { name, ...rest } = pkg;
 
 const DEFAULT_MAP = {
   app: name,
-  ...pkg
+  ...rest
 };
 
 // Simple api for managing commands.
@@ -267,7 +272,8 @@ export function initApi(argv: any[]) {
   };
 
   const run = () => {
-    const { commands, options } = config;
+    let { commands, options } = config;
+    options = { ...globalOptions, ...options };
     const cleaned = filterOptions([...aliases, 'version'], options);
     const spawnmon = new Spawnmon(cleaned);
     commands.forEach(opts => {

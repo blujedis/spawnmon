@@ -5,7 +5,7 @@ const PINGER_DEFAULTS = {
     active: true,
     host: '127.0.0.1',
     port: 3000,
-    attempts: 10,
+    attempts: 25,
     timeout: 1800,
     autoStop: true
 };

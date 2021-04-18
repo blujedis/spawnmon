@@ -15,11 +15,15 @@ const yargs_parser_1 = __importDefault(require("yargs-parser"));
 const spawnmon_1 = require("../spawnmon");
 const table_1 = __importDefault(require("./table"));
 const help_1 = require("./help");
+const init_1 = require("./init");
 const utils_1 = require("./utils");
-const { name, ...pkg } = utils_1.spawnmonPkg;
+// Strip name here and call it "app"
+// so we don't conflict with the help
+// object.name prop.
+const { name, ...rest } = init_1.pkg;
 const DEFAULT_MAP = {
     app: name,
-    ...pkg
+    ...rest
 };
 // Simple api for managing commands.
 function initApi(argv) {
@@ -97,7 +101,7 @@ function initApi(argv) {
     };
     const getHeader = (usage = true, padding) => {
         const lines = [];
-        lines.push(' ' + help_1.logo); // need space for logo alignment.
+        lines.push(' ' + init_1.logo); // need space for logo alignment.
         if (!usage && padding || usage)
             lines.push('');
         if (usage) {
@@ -112,7 +116,7 @@ function initApi(argv) {
     // Public Methods
     const show = {
         logo: (padding = 'none') => {
-            const lines = padLine(' ' + help_1.logo, padding);
+            const lines = padLine(' ' + init_1.logo, padding);
             return console.log(lines.join('\n'));
         },
         header: (usage = true, padding) => console.log(getHeader(usage, padding).join('\n')),
@@ -199,7 +203,8 @@ function initApi(argv) {
         return key && hasFlag(firstArg) && hasHelp();
     };
     const run = () => {
-        const { commands, options } = config;
+        let { commands, options } = config;
+        options = { ...init_1.globalOptions, ...options };
         const cleaned = utils_1.filterOptions([...aliases, 'version'], options);
         const spawnmon = new spawnmon_1.Spawnmon(cleaned);
         commands.forEach(opts => {

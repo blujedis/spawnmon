@@ -17,6 +17,7 @@ export interface ICommandOptions extends SpawnOptions {
     command: string;
     as?: string;
     group?: string | string[];
+    index?: number;
     args?: string[];
     transform?: TransformHandler;
     color?: string;
@@ -52,6 +53,7 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
     maxProcesses?: number;
     pipeInput?: string | Command;
     outputExitCode?: boolean;
+    sendEnter?: boolean;
     onTimestamp?: () => string;
 }
 export declare type PingerEvent = 'retry' | 'failed' | 'connected' | 'destroyed';

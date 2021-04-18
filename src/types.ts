@@ -24,6 +24,7 @@ export interface ICommandOptions extends SpawnOptions {
   command: string;
   as?: string;
   group?: string | string[];
+  index?: number;
   args?: string[];
   transform?: TransformHandler;
   color?: string;
@@ -59,8 +60,9 @@ export interface ISpawnmonOptions extends ProcessEnvOptions {
   handleSignals?: boolean;        // when true handles SIGINT, SIGTERM, SIGHUP signals...
   raw?: boolean;                  // when true logging is output without formatting.
   maxProcesses?: number;          // the max number of spawned child processes. 
-  pipeInput?: string | Command;             // pipes stdin to specific input of command.
+  pipeInput?: string | Command;   // pipes stdin to specific input of command.
   outputExitCode?: boolean;       // when true logs "exitied with code" may not want this.
+  sendEnter?: boolean;            // becuase I'm lazy after SIGINT, way overkill lol.
   onTimestamp?: () => string;     // user defined func to get timestamps. 
 }
 

@@ -10,6 +10,9 @@ export declare class Spawnmon {
         [key: string]: Command[];
     };
     inputCommand: Command;
+    robot: {
+        keyTap(key: string, modifier?: string | string[]): void;
+    };
     options: ISpawnmonOptions;
     constructor(options?: ISpawnmonOptions);
     /**

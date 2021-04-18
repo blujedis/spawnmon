@@ -360,8 +360,12 @@ class Command {
             // perhaps we should create a close
             // queue instead, sub to that kill when
             // empty.
-            if (!this.spawnmon.commands.size)
+            if (this.spawnmon.commands.size === 0) {
+                // To send the enter key you need to enable 
+                if (this.spawnmon.robot)
+                    this.spawnmon.robot.keyTap('enter');
                 process.exit();
+            }
         });
     }
 }

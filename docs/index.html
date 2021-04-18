@@ -76,20 +76,20 @@
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --examples</span>
 </code></pre>
 				<a href="#using-from-command-line" id="using-from-command-line" style="color: inherit; text-decoration: none;">
-					<h3>Using From Command Line</h3>
+					<h2>Using From Command Line</h2>
 				</a>
 				<p>Commands to be run by Spawnmon should be grouped in single or double quotes with options typically prior to commands.</p>
 				<p>The following will run rollup then watch for changes and also spin up Create React App.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
 				<a href="#log-prefix" id="log-prefix" style="color: inherit; text-decoration: none;">
-					<h4>Log Prefix</h4>
+					<h2>Log Prefix</h2>
 				</a>
 				<p>Internally spawnmon will replace <strong>{index|command|pid|timestamp|group}</strong> with the corresponding value. Pass a template with <strong>{key_from_above}</strong> or without a template. One of those five should work for you.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --prefix </span><span style="color: #A31515">&#039;[{command}]&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
 				<a href="#commands-amp-syntax" id="commands-amp-syntax" style="color: inherit; text-decoration: none;">
-					<h3>Commands &amp; Syntax</h3>
+					<h2>Commands &amp; Syntax</h2>
 				</a>
 				<p>Tinkered around with this a fair amount and the best way is to use indexes. For example say you are running two commands.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon </span><span style="color: #A31515">&#039;rollup -c w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
@@ -100,16 +100,35 @@
 				<p>In the above it assumes the index of the corresponding command is in sequential order but you could also specify as below and you&#39;d get the same output.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --color 1:blue,0:cyan </span><span style="color: #A31515">&#039;rollup -c w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
+				<p>You can also use globstars in the following manner. This would run anything that begins with <strong>&quot;build:&quot;</strong> for example.</p>
+				<p>If you use this feature with <strong>onTimeout</strong> or <strong>onConnect</strong> flags just note that the target index will be set to the <strong>last</strong> command in the list. This is because we&#39;re filtering or looking up multiple commands. If you don&#39;t want this you&#39;ll have to specify those commands manually. Just keep in mind there&#39;s no <strong>!</strong> char that can be used to filter just one specific command in the group. Maybe we can add that later.</p>
+				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon </span><span style="color: #A31515">&#039;npm run build:*&#039;</span>
+</code></pre>
+				<a href="#global-options" id="global-options" style="color: inherit; text-decoration: none;">
+					<h2>Global Options</h2>
+				</a>
+				<p>You can specify global spawnmon options in your <strong>package.json</strong> file under the key <strong>spawnmon</strong> or you can specify a <strong>spawnmon.json</strong> file in your project. These options will then be used unless overwritten in the command line itself. </p>
+				<p>The benefit to this is consisency between projects and makes your npm scripts a little cleaner easier to read so they aren&#39;t wrapping which we personally prefer.</p>
+				<pre><code class="language-json"><span style="color: #000000">{</span>
+<span style="color: #000000">  </span><span style="color: #0451A5">&quot;scripts&quot;</span><span style="color: #000000">: {</span>
+<span style="color: #000000">    </span><span style="color: #008000">// your scripts here will merge in the options below!</span>
+<span style="color: #000000">  },</span>
+<span style="color: #000000">  </span><span style="color: #0451A5">&quot;spawnmon&quot;</span><span style="color: #000000">: {</span>
+<span style="color: #000000">    </span><span style="color: #0451A5">&quot;prefix&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;({pid})&quot;</span><span style="color: #000000">,</span>
+<span style="color: #000000">    </span><span style="color: #0451A5">&quot;defaultColor&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;bgBlue.yellow&quot;</span>
+<span style="color: #000000">  }</span>
+<span style="color: #000000">}</span>
+</code></pre>
 				<a href="#why-use-indexes-instead-of-command-names" id="why-use-indexes-instead-of-command-names" style="color: inherit; text-decoration: none;">
-					<h4>Why use indexes instead of command names?</h4>
+					<h2>Why use indexes instead of command names?</h2>
 				</a>
 				<p>You could use the same command more than once, you may also want to group them so that the prefixes reflect the group they belong to. This gets messy and LONG! Using the index of the command keeps it much shorter. </p>
 				<a href="#cool-features" id="cool-features" style="color: inherit; text-decoration: none;">
-					<h3>Cool Features</h3>
+					<h2>Cool Features</h2>
 				</a>
 				<p>Spawnmon can run another command after the previous becomes idle or can use the internal socket connection helper to fire a command after a successful ping and connection.</p>
 				<a href="#running-command-after-socket-connection" id="running-command-after-socket-connection" style="color: inherit; text-decoration: none;">
-					<h4>Running Command after Socket Connection</h4>
+					<h2>Running Command after Socket Connection</h2>
 				</a>
 				<p>In the below example <strong>&quot;electron&quot;</strong> will only be added to Spawnmon as a runnable command but will not immediatelly be spawned. </p>
 				<p>The format here is <strong>parent-index:child-index</strong>. The host and port are set to 127.0.0.1:3000. If you want to change that use also <code>--on-connect-address 127.0.0.1:9000</code> or whatever host and port you need.</p>
@@ -118,12 +137,31 @@
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --on-connect 2:0 </span><span style="color: #A31515">&#039;electron .&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
 				<a href="#running-command-after-parent-is-idle" id="running-command-after-parent-is-idle" style="color: inherit; text-decoration: none;">
-					<h4>Running Command after Parent is Idle</h4>
+					<h2>Running Command after Parent is Idle</h2>
 				</a>
 				<p>You can also run something after the output stream becomes idle. In short it stops writing to the console. The time checks if it&#39;s been updated since the previous tick of the interval. Super simple but works fairly well. Not a perfect science but helpful.</p>
 				<p>Programmatically you have much more control on the success or &quot;idle&quot; condition.</p>
 				<pre><code class="language-sh"><span style="color: #000000">$ spawnmon --on-timeout 1:0 </span><span style="color: #A31515">&#039;echo rollup done!&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;rollup -c -w&#039;</span><span style="color: #000000"> </span><span style="color: #A31515">&#039;react-scripts start&#039;</span>
 </code></pre>
+				<a href="#options" id="options" style="color: inherit; text-decoration: none;">
+					<h2>Options</h2>
+				</a>
+				<p>The screenshot below is a representation of running <code>spawnmon -h</code></p>
+				<p>
+					<img src="https://github.com/blujedis/spawnmon/blob/main/fixtures/options.png" />
+				</p>
+				<a href="#see-more-in-docs" id="see-more-in-docs" style="color: inherit; text-decoration: none;">
+					<h2>See More in Docs</h2>
+				</a>
+				<p><a href="https://blujedis.github.io/spawnmon/interfaces/types.ispawnmonoptions.html">Spawnmon Instance Options</a></p>
+				<p><a href="https://blujedis.github.io/spawnmon/interfaces/types.icommandoptions.html">Command Options</a></p>
+				<a href="#examples" id="examples" style="color: inherit; text-decoration: none;">
+					<h2>Examples</h2>
+				</a>
+				<p>Note I would urge you to run <code>spawnmon --examples</code> as things have changed or been tweaked these keep changing but the syntax is reasonably set at this point. Just keep that in mind. The below for brevity only shows command examples. Run the examples to get to get the full list.</p>
+				<p>
+					<img src="https://github.com/blujedis/spawnmon/blob/main/fixtures/command.png" />
+				</p>
 				<a href="#programmatic-usage" id="programmatic-usage" style="color: inherit; text-decoration: none;">
 					<h2>Programmatic Usage</h2>
 				</a>
@@ -166,6 +204,10 @@
 					<h2>Change</h2>
 				</a>
 				<p>See <a href="CHANGE.md">CHANGE.md</a></p>
+				<a href="#todo" id="todo" style="color: inherit; text-decoration: none;">
+					<h2>Todo</h2>
+				</a>
+				<p>Tests, tests and more tests...</p>
 				<a href="#license" id="license" style="color: inherit; text-decoration: none;">
 					<h2>License</h2>
 				</a>
@@ -189,6 +231,9 @@
 					</li>
 					<li class=" tsd-kind-module">
 						<a href="modules/cli_help.html">cli/help</a>
+					</li>
+					<li class=" tsd-kind-module">
+						<a href="modules/cli_init.html">cli/init</a>
 					</li>
 					<li class=" tsd-kind-module">
 						<a href="modules/cli_table.html">cli/table</a>

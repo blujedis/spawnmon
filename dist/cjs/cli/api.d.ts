@@ -53,7 +53,7 @@ declare const _default: {
         header: (usage?: boolean, padding?: boolean) => void;
         section: (label: string, color?: string, padding?: PaddingKey, indent?: string) => void;
         groups: (color?: string) => void;
-        item: (key: "prefix" | "prefixMax" | "prefixAlign" | "prefixFill" | "defaultColor" | "condensed" | "raw" | "maxProcesses" | "pipeInput" | "group" | "color" | "mute" | "delay" | "version" | "onTimeout" | "onConnect" | "onConnectAddress", color?: string) => void;
+        item: (key: "prefix" | "prefixMax" | "prefixAlign" | "prefixFill" | "defaultColor" | "condensed" | "raw" | "maxProcesses" | "pipeInput" | "sendEnter" | "group" | "color" | "mute" | "delay" | "version" | "onTimeout" | "onConnect" | "onConnectAddress", color?: string) => void;
         examples: (color?: string) => void;
         pad: (count?: number) => void;
         message: (msg: string, color?: string, padding?: PaddingKey) => void;

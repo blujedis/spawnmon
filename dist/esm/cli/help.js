@@ -1,7 +1,4 @@
 import { stylizer } from './utils';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-const logo = readFileSync(join(__dirname, './logo.txt')).toString().trim();
 const DEFAULT_TRANSFORM = (v => v);
 const DIGIT_EXP = /^\d+$/;
 const toInt = (val) => {
@@ -29,7 +26,6 @@ const coerceToArray = (transform = DEFAULT_TRANSFORM) => (arr) => {
 //////////////////////////////////////////////////
 // MISC 
 //////////////////////////////////////////////////
-const usage = `usage: {app} [options] <commands...>`;
 const version = {
     name: `version`,
     description: `Spawnmon version.`,
@@ -59,8 +55,7 @@ const prefix = {
         `index, command, pid, timestamp`
     ],
     type: 'string',
-    group: 'spawnmon',
-    default: '[{index}]'
+    group: 'spawnmon'
 };
 const prefixFill = {
     name: `prefixFill`,
@@ -75,8 +70,7 @@ const prefixFill = {
         `Specify any single character to be used as "fill" when aligning prefixes.`
     ],
     type: 'string',
-    group: 'spawnmon',
-    default: '.'
+    group: 'spawnmon'
 };
 const prefixMax = {
     name: `prefixMax`,
@@ -87,10 +81,9 @@ const prefixMax = {
         `{app} -m 8 'rollup -c -w'`
     ],
     isFlag: true,
-    help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
+    help: `When prefix is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
     type: 'number',
-    group: 'spawnmon',
-    default: 10
+    group: 'spawnmon'
 };
 const prefixAlign = {
     name: `prefixAlign`,
@@ -124,8 +117,7 @@ const defaultColor = {
         `The default color applies to all prefixes use '--colors' to apply custom colors to each command.`
     ],
     type: 'string',
-    group: 'spawnmon',
-    default: 'dim'
+    group: 'spawnmon'
 };
 const condensed = {
     name: `condensed`,
@@ -138,8 +130,7 @@ const condensed = {
     isFlag: true,
     help: `Depending on the module run some output multiple newlines which can make the terminal unnecessarily length. Condensed limits this as much as reasonable.`,
     type: 'boolean',
-    group: 'spawnmon',
-    default: false
+    group: 'spawnmon'
 };
 const maxProcesses = {
     name: `maxProcess`,
@@ -152,8 +143,7 @@ const maxProcesses = {
     isFlag: true,
     help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`,
     type: 'number',
-    group: 'spawnmon',
-    default: 5
+    group: 'spawnmon'
 };
 const raw = {
     name: `raw`,
@@ -166,8 +156,7 @@ const raw = {
     isFlag: true,
     help: `When using {app} programatically "transform" method is still called before writing.`,
     type: 'boolean',
-    group: 'spawnmon',
-    default: false
+    group: 'spawnmon'
 };
 const pipeInput = {
     name: `pipeInput`,
@@ -180,6 +169,19 @@ const pipeInput = {
     isFlag: true,
     help: `By piping the stdin stream to a specific command you can still issue commands like "rs" to restart Nodemon and have it function as expected.`,
     type: 'number',
+    group: 'spawnmon'
+};
+const sendEnter = {
+    name: `sendEnter`,
+    description: `When true sends enter key signal to terminal.`,
+    alias: `s`,
+    examples: [
+        `{app} --send-enter 'rollup -c -w' 'nodemon'`,
+        `{app} -s 'rollup -c -w' 'nodemon'`,
+    ],
+    isFlag: true,
+    help: `When killing commands you'll notice that you may not return to your normal prompt. This happens with other runners like concurrently. Yes you can just ctrl-c again but my anal retentive ass hates it. So in complete overkill this enables RobotJS to send that key to the terminal. Keep in mind on Mac for example you'll be required to authorize VSCode to allow this action. In short it's handy but completely unnecessary.`,
+    type: 'boolean',
     group: 'spawnmon'
 };
 //////////////////////////////////////////////////
@@ -340,7 +342,8 @@ const onConnectAddress = {
         return arr;
     })
 };
-const configs = {
+export const usage = `usage: {app} [options] <commands...>`;
+export const configs = {
     raw,
     maxProcesses,
     prefixAlign,
@@ -349,15 +352,15 @@ const configs = {
     prefix,
     prefixFill,
     prefixMax,
-    group,
     version,
+    pipeInput,
+    sendEnter,
+    group,
     color,
     delay,
     mute,
     onTimeout,
     onConnect,
-    onConnectAddress,
-    pipeInput
+    onConnectAddress
 };
-export { configs, usage, logo };
 //# sourceMappingURL=help.js.map

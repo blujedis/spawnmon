@@ -1,4 +1,3 @@
-declare const logo: string;
 export declare type HelpConfigs = typeof configs;
 export declare type HelpKey = keyof HelpConfigs;
 export declare type HelpItem<K extends HelpKey> = HelpConfigs[K];
@@ -22,8 +21,8 @@ export interface IHelpItemGrouped<G extends HelpGroupKey> extends IHelpItem {
     group: G;
 }
 export declare type TransformHandler = (val: any, ...args: any[]) => any;
-declare const usage = "usage: {app} [options] <commands...>";
-declare const configs: {
+export declare const usage = "usage: {app} [options] <commands...>";
+export declare const configs: {
     raw: IHelpItem;
     maxProcesses: IHelpItem;
     prefixAlign: IHelpItem;
@@ -32,14 +31,14 @@ declare const configs: {
     prefix: IHelpItem;
     prefixFill: IHelpItem;
     prefixMax: IHelpItem;
-    group: IHelpItem;
     version: IHelpItem;
+    pipeInput: IHelpItem;
+    sendEnter: IHelpItem;
+    group: IHelpItem;
     color: IHelpItem;
     delay: IHelpItem;
     mute: IHelpItem;
     onTimeout: IHelpItem;
     onConnect: IHelpItem;
     onConnectAddress: IHelpItem;
-    pipeInput: IHelpItem;
 };
-export { configs, usage, logo };

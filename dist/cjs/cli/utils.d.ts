@@ -4,8 +4,6 @@ import { HelpConfigs } from './help';
 import { ICommandOptions, ICommandOptionsExt, ISpawnmonOptions } from '../types';
 export declare type Case = 'upper' | 'lower' | 'cap' | 'dash' | 'snake' | 'title' | 'dot' | 'camel';
 export declare type ToArrayType = string | boolean | number;
-export declare const spawnmonPkg: any;
-export declare const scripts: any;
 /**
  * Escapes a regexp string.
  *

@@ -1,4 +1,23 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -16,14 +35,15 @@ const SPAWNMON_DEFAULTS = {
     writestream: process.stdout,
     transform: (line) => line.toString(),
     prefix: '[{index}]',
-    prefixMax: 10,
+    prefixMax: 12,
     defaultColor: 'dim',
     prefixAlign: 'left',
     prefixFill: '.',
     condensed: false,
     handleSignals: true,
     onTimestamp: utils_1.simpleTimestamp,
-    outputExitCode: false
+    outputExitCode: false,
+    sendEnter: false
 };
 exports.DEFAULT_GROUP_NAME = 'default';
 class Spawnmon {
@@ -40,6 +60,13 @@ class Spawnmon {
             };
         if (options.handleSignals)
             this.handleSignals();
+        if (options.sendEnter) {
+            Promise.resolve().then(() => __importStar(require('robotjs'))).then(robot => {
+                this.robot = robot;
+            }).catch(err => {
+                console.error(err);
+            });
+        }
         this.options = options;
     }
     /**
@@ -110,8 +137,19 @@ class Spawnmon {
         }
         const labels = commands.map(cmd => {
             const c = this.get(cmd);
-            if (prefixKey === 'command')
+            if (prefixKey === 'command') {
+                // if we get just the name here we could
+                // end up with the command name of yarn or npm.
+                // if that is detected return the first or second
+                // arg depending.
+                if (/npm|yarn|pnpm/.test(c.command)) {
+                    if (c.args[0] === 'run')
+                        return c.args[1];
+                    return c.args[0];
+                }
+                // Otherwise we just return the command name or alias.
                 return c.name;
+            }
             return this.getCommandGroups(c, true);
         });
         // Iterate and get command name longest length.
@@ -141,10 +179,17 @@ class Spawnmon {
         const template = this.options.prefix;
         const [index, indexesLen] = this.getIndex(cmd);
         color = cmd.options.color || color;
+        let cmdName = cmd.name;
+        // arg depending.
+        if (/npm|yarn|pnpm/.test(cmd.command)) {
+            cmdName = cmd.args[0];
+            if (cmd.args[0] === 'run') // is npm shift to next
+                cmdName = cmd.args[1];
+        }
         const map = {
             index: index === -1 ? '-' : index,
             pid: cmd.pid,
-            command: cmd.name,
+            command: cmdName,
             timestamp: this.options.onTimestamp(),
             group: this.getCommandGroups(cmd, true)
         };
@@ -202,8 +247,7 @@ class Spawnmon {
             // Empty line condensed on ignore it.
             if (condensed && (utils_1.isBlankLine(line) || !line.length))
                 return results;
-            // const inspect = line.replace(/[^\w]/gi, '').trim();
-            if (index === 0 || index === lines.length - 1)
+            if ((index === 0 || index === lines.length - 1) && !condensed)
                 return [...results, line];
             // Ansi escape resets color that may wrap from preceeding line.
             line = '\u001b[0m' + prefix + line;
@@ -211,10 +255,11 @@ class Spawnmon {
         }, []);
         output = lines.join('\n');
         const last = output[output.length - 1];
-        if (!this.prevChar || this.prevChar === '\n')
-            output = prefix + output;
+        if (!this.prevChar || this.prevChar === '\n') {
+            if (!condensed || (condensed && this.prevChar))
+                output = prefix + output;
+        }
         this.prevChar = last;
-        // need to tweak this a bit so we don't get random prefix with blank line.
         return output;
     }
     /**
@@ -435,7 +480,14 @@ class Spawnmon {
             process.on(signal, () => {
                 const lines = [];
                 [...this.commands.values()].forEach(cmd => {
-                    lines.push(utils_1.colorize(`${cmd.name} recived signal ${signal}.`, 'dim'));
+                    let cmdStr = cmd.command;
+                    if (/npm|yarn|pnpm/.test(cmdStr)) {
+                        if (cmdStr === 'npm')
+                            cmdStr = cmdStr + ` ${cmd.args.slice(0, 2).join(' ')}`;
+                        else
+                            cmdStr = cmdStr + ` ${cmd.args.slice(0, 1).join(' ')}`;
+                    }
+                    lines.push(utils_1.colorize(`${cmdStr} recived signal ${signal} (${cmd.name}).`, 'dim'));
                     if (cmd.process)
                         cmd.process.emit('close', -9999, signal);
                 });

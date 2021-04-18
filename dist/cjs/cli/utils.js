@@ -3,12 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toYargsOptions = exports.parseCommand = exports.escapeRegex = exports.scripts = exports.spawnmonPkg = void 0;
+exports.createError = exports.unflag = exports.toFlag = exports.simpleFormatter = exports.changeCase = exports.toArray = exports.stylizer = exports.filterOptions = exports.toConfig = exports.toCommands = exports.toYargsOptions = exports.parseCommand = exports.escapeRegex = void 0;
 const ansi_colors_1 = __importDefault(require("ansi-colors"));
-const fs_1 = require("fs");
-const path_1 = require("path");
-exports.spawnmonPkg = JSON.parse(fs_1.readFileSync(path_1.join(__dirname, '../../../package.json')).toString());
-exports.scripts = JSON.parse(fs_1.readFileSync(path_1.join(process.cwd(), 'package.json')).toString()).scripts;
+const init_1 = require("./init");
 const TEMPLATE_EXP = /\{.+?\}/g;
 const helpers = {
     upper: v => changeCase(v, 'upper'),
@@ -51,7 +48,7 @@ function parseCommand(arg) {
                 args
             }];
     }
-    const keys = Object.keys(exports.scripts || {});
+    const keys = Object.keys(init_1.appPkg.scripts || {});
     if (!keys.length)
         throw createError(`Received script command ${scriptCmd} but no scripts present in package.json.`);
     const beforeIndex = escapeRegex(scriptCmd.substr(0, wildIndex));
@@ -229,6 +226,7 @@ function toCommands(commands, options) {
             timer,
             pinger
         };
+        // Merge with global options from package.json config or file config.
         return cmd;
     });
     return _commands;
@@ -411,19 +409,4 @@ function createError(errOrMessage) {
     return err;
 }
 exports.createError = createError;
-// const args = v.match(/('.*?'|".*?"|\S+)/g);
-// const command = args.shift() as string;
-// return {
-//   command,
-//   args,
-//   index,
-//   as: command + '-' + index,
-//   group: undefined as string,
-//   color: undefined as string,
-//   delay: undefined as number,
-//   mute: undefined as boolean,
-//   timer: undefined as any,
-//   pinger: undefined as any,
-//   runnable: true
-// };
 //# sourceMappingURL=utils.js.map

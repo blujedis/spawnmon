@@ -1,9 +1,4 @@
 import { stylizer } from './utils';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { createError } from './utils';
-
-const logo = readFileSync(join(__dirname, './logo.txt')).toString().trim();
 
 export type HelpConfigs = typeof configs;
 export type HelpKey = keyof HelpConfigs;
@@ -65,8 +60,6 @@ const coerceToArray = (transform: (arr, index?: number) => any[] = DEFAULT_TRANS
 // MISC 
 //////////////////////////////////////////////////
 
-const usage = `usage: {app} [options] <commands...>`;
-
 const version: IHelpItem = {
   name: `version`,
   description: `Spawnmon version.`,
@@ -98,8 +91,7 @@ const prefix: IHelpItem = {
     `index, command, pid, timestamp`
   ],
   type: 'string',
-  group: 'spawnmon',
-  default: '[{index}]'
+  group: 'spawnmon'
 };
 
 const prefixFill: IHelpItem = {
@@ -115,8 +107,7 @@ const prefixFill: IHelpItem = {
     `Specify any single character to be used as "fill" when aligning prefixes.`
   ],
   type: 'string',
-  group: 'spawnmon',
-  default: '.'
+  group: 'spawnmon'
 };
 
 const prefixMax: IHelpItem = {
@@ -128,10 +119,9 @@ const prefixMax: IHelpItem = {
     `{app} -m 8 'rollup -c -w'`
   ],
   isFlag: true,
-  help: `When {name} is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
+  help: `When prefix is enabled the prefix including templating cannot exceed this this length. This ensures a cleaner looking terminal.`,
   type: 'number',
-  group: 'spawnmon',
-  default: 10
+  group: 'spawnmon'
 };
 
 const prefixAlign: IHelpItem = {
@@ -167,8 +157,7 @@ const defaultColor: IHelpItem = {
     `The default color applies to all prefixes use '--colors' to apply custom colors to each command.`
   ],
   type: 'string',
-  group: 'spawnmon',
-  default: 'dim'
+  group: 'spawnmon'
 };
 
 const condensed: IHelpItem = {
@@ -182,8 +171,7 @@ const condensed: IHelpItem = {
   isFlag: true,
   help: `Depending on the module run some output multiple newlines which can make the terminal unnecessarily length. Condensed limits this as much as reasonable.`,
   type: 'boolean',
-  group: 'spawnmon',
-  default: false
+  group: 'spawnmon'
 
 };
 
@@ -198,8 +186,7 @@ const maxProcesses: IHelpItem = {
   isFlag: true,
   help: `Defines the maximum number of children that may be spawned. When using programatically this also applies to command dependents that are spawned.`,
   type: 'number',
-  group: 'spawnmon',
-  default: 5
+  group: 'spawnmon'
 };
 
 const raw: IHelpItem = {
@@ -213,8 +200,7 @@ const raw: IHelpItem = {
   isFlag: true,
   help: `When using {app} programatically "transform" method is still called before writing.`,
   type: 'boolean',
-  group: 'spawnmon',
-  default: false
+  group: 'spawnmon'
 };
 
 const pipeInput: IHelpItem = {
@@ -228,6 +214,20 @@ const pipeInput: IHelpItem = {
   isFlag: true,
   help: `By piping the stdin stream to a specific command you can still issue commands like "rs" to restart Nodemon and have it function as expected.`,
   type: 'number',
+  group: 'spawnmon'
+};
+
+const sendEnter: IHelpItem = {
+  name: `sendEnter`,
+  description: `When true sends enter key signal to terminal.`,
+  alias: `s`,
+  examples: [
+    `{app} --send-enter 'rollup -c -w' 'nodemon'`,
+    `{app} -s 'rollup -c -w' 'nodemon'`,
+  ],
+  isFlag: true,
+  help: `When killing commands you'll notice that you may not return to your normal prompt. This happens with other runners like concurrently. Yes you can just ctrl-c again but my anal retentive ass hates it. So in complete overkill this enables RobotJS to send that key to the terminal. Keep in mind on Mac for example you'll be required to authorize VSCode to allow this action. In short it's handy but completely unnecessary.`,
+  type: 'boolean',
   group: 'spawnmon'
 };
 
@@ -399,7 +399,9 @@ const onConnectAddress: IHelpItem = {
 
 };
 
-const configs = {
+export const usage = `usage: {app} [options] <commands...>`;
+
+export const configs = {
   raw,
   maxProcesses,
   prefixAlign,
@@ -408,15 +410,16 @@ const configs = {
   prefix,
   prefixFill,
   prefixMax,
-  group,
   version,
+  pipeInput,
+  sendEnter,
+
+  group,
   color,
   delay,
   mute,
   onTimeout,
   onConnect,
-  onConnectAddress,
-  pipeInput
+  onConnectAddress
 };
 
-export { configs, usage, logo };

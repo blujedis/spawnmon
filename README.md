@@ -21,7 +21,7 @@ $ spawnmon -h
 $ spawnmon --examples
 ```
 
-### Using From Command Line
+## Using From Command Line
 
 Commands to be run by Spawnmon should be grouped in single or double quotes with options typically prior to commands.
 
@@ -31,7 +31,7 @@ The following will run rollup then watch for changes and also spin up Create Rea
 $ spawnmon 'rollup -c -w' 'react-scripts start'
 ```
 
-#### Log Prefix
+## Log Prefix
 
 Internally spawnmon will replace **{index|command|pid|timestamp|group}** with the corresponding value. Pass a template with **{key_from_above}** or without a template. One of those five should work for you.
 
@@ -39,7 +39,7 @@ Internally spawnmon will replace **{index|command|pid|timestamp|group}** with th
 $ spawnmon --prefix '[{command}]' 'rollup -c -w' 'react-scripts start'
 ```
 
-### Commands & Syntax
+## Commands & Syntax
 
 Tinkered around with this a fair amount and the best way is to use indexes. For example say you are running two commands.
 
@@ -67,15 +67,33 @@ If you use this feature with **onTimeout** or **onConnect** flags just note that
 $ spawnmon 'npm run build:*'
 ```
 
-#### Why use indexes instead of command names?
+## Global Options
+
+You can specify global spawnmon options in your **package.json** file under the key **spawnmon** or you can specify a **spawnmon.json** file in your project. These options will then be used unless overwritten in the command line itself. 
+
+The benefit to this is consisency between projects and makes your npm scripts a little cleaner easier to read so they aren't wrapping which we personally prefer.
+
+```json
+{
+  "scripts": {
+    // your scripts here will merge in the options below!
+  },
+  "spawnmon": {
+    "prefix": "({pid})",
+    "defaultColor": "bgBlue.yellow"
+  }
+}
+```
+
+## Why use indexes instead of command names?
 
 You could use the same command more than once, you may also want to group them so that the prefixes reflect the group they belong to. This gets messy and LONG! Using the index of the command keeps it much shorter. 
 
-### Cool Features
+## Cool Features
 
 Spawnmon can run another command after the previous becomes idle or can use the internal socket connection helper to fire a command after a successful ping and connection.
 
-#### Running Command after Socket Connection
+## Running Command after Socket Connection
 
 In the below example **"electron"** will only be added to Spawnmon as a runnable command but will not immediatelly be spawned. 
 
@@ -89,7 +107,7 @@ Timing not to your liking? Add a delay <code>--delay 0:1000</code> which would a
 $ spawnmon --on-connect 2:0 'electron .' 'rollup -c -w' 'react-scripts start'
 ```
 
-#### Running Command after Parent is Idle
+## Running Command after Parent is Idle
 
 You can also run something after the output stream becomes idle. In short it stops writing to the console. The time checks if it's been updated since the previous tick of the interval. Super simple but works fairly well. Not a perfect science but helpful.
 
@@ -107,7 +125,7 @@ The screenshot below is a representation of running <code>spawnmon -h</code>
   <img src="https://github.com/blujedis/spawnmon/blob/main/fixtures/options.png" />
 </p>
 
-### See More in Docs
+## See More in Docs
 
 [Spawnmon Instance Options](https://blujedis.github.io/spawnmon/interfaces/types.ispawnmonoptions.html)
 
@@ -165,6 +183,10 @@ See [https://blujedis.github.io/spawnmon/](https://blujedis.github.io/spawnmon/)
 ## Change
 
 See [CHANGE.md](CHANGE.md)
+
+## Todo
+
+Tests, tests and more tests...
 
 ## License
 

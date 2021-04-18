@@ -1,9 +1,9 @@
-import { fromEvent, Subscription } from 'rxjs';
+import { fromEvent } from 'rxjs';
 import { map } from 'rxjs/operators';
 import supportsColor from 'supports-color';
 import { Command } from './command';
-import { ISpawnmonOptions, ICommandOptions, Color, PrefixKey } from './types';
-import { colorize, truncate, isBlankLine, createError, simpleTimestamp, ensureDefaults } from './utils';
+import { ISpawnmonOptions, ICommandOptions, Color } from './types';
+import { colorize, truncate, isBlankLine, createError, simpleTimestamp, ensureDefaults, escapeRegex } from './utils';
 
 const colorSupport = supportsColor.stdout;
 
@@ -14,14 +14,15 @@ const SPAWNMON_DEFAULTS: ISpawnmonOptions = {
   writestream: process.stdout,
   transform: (line) => line.toString(),
   prefix: '[{index}]', // index, command, pid, timestamp
-  prefixMax: 10,
+  prefixMax: 12,
   defaultColor: 'dim',
   prefixAlign: 'left',
   prefixFill: '.',
   condensed: false,
   handleSignals: true,
   onTimestamp: simpleTimestamp,
-  outputExitCode: false
+  outputExitCode: false,
+  sendEnter: false
 };
 
 export const DEFAULT_GROUP_NAME = 'default';
@@ -35,6 +36,7 @@ export class Spawnmon {
   commands = new Map<string, Command>();
   groups = {} as { [key: string]: Command[] }; // running groups.
   inputCommand: Command; // the command handling input.
+  robot: { keyTap(key: string, modifier?: string | string[]): void }
 
   options: ISpawnmonOptions;
 
@@ -50,6 +52,14 @@ export class Spawnmon {
 
     if (options.handleSignals)
       this.handleSignals();
+
+    if (options.sendEnter) {
+      import('robotjs').then(robot => {
+        this.robot = robot;
+      }).catch(err => {
+        console.error(err);
+      });
+    }
 
     this.options = options;
 
@@ -133,8 +143,19 @@ export class Spawnmon {
 
     const labels = commands.map(cmd => {
       const c = this.get(cmd);
-      if (prefixKey === 'command')
+      if (prefixKey === 'command') {
+        // if we get just the name here we could
+        // end up with the command name of yarn or npm.
+        // if that is detected return the first or second
+        // arg depending.
+        if (/npm|yarn|pnpm/.test(c.command)) {
+          if (c.args[0] === 'run')
+            return c.args[1];
+          return c.args[0];
+        }
+        // Otherwise we just return the command name or alias.
         return c.name;
+      }
       return this.getCommandGroups(c, true);
     });
 
@@ -175,10 +196,19 @@ export class Spawnmon {
     const [index, indexesLen] = this.getIndex(cmd);
     color = cmd.options.color || color;
 
+    let cmdName = cmd.name;
+
+    // arg depending.
+    if (/npm|yarn|pnpm/.test(cmd.command)) {
+      cmdName = cmd.args[0];
+      if (cmd.args[0] === 'run') // is npm shift to next
+        cmdName = cmd.args[1];
+    }
+
     const map = {
       index: index === -1 ? '-' : index,
       pid: cmd.pid,
-      command: cmd.name,
+      command: cmdName,
       timestamp: this.options.onTimestamp(),
       group: this.getCommandGroups(cmd, true)
     };
@@ -256,9 +286,7 @@ export class Spawnmon {
       if (condensed && (isBlankLine(line) || !line.length))
         return results;
 
-      // const inspect = line.replace(/[^\w]/gi, '').trim();
-
-      if (index === 0 || index === lines.length - 1)
+      if ((index === 0 || index === lines.length - 1) && !condensed)
         return [...results, line];
 
       // Ansi escape resets color that may wrap from preceeding line.
@@ -272,12 +300,13 @@ export class Spawnmon {
 
     const last = output[output.length - 1];
 
-    if (!this.prevChar || this.prevChar === '\n')
-      output = prefix + output;
+    if (!this.prevChar || this.prevChar === '\n') {
+      if (!condensed || (condensed && this.prevChar))
+        output = prefix + output;
+    }
 
     this.prevChar = last;
 
-    // need to tweak this a bit so we don't get random prefix with blank line.
     return output;
 
   }
@@ -636,7 +665,17 @@ export class Spawnmon {
         const lines = [];
 
         [...this.commands.values()].forEach(cmd => {
-          lines.push(colorize(`${cmd.name} recived signal ${signal}.`, 'dim'));
+
+          let cmdStr = cmd.command;
+
+          if (/npm|yarn|pnpm/.test(cmdStr)) {
+            if (cmdStr === 'npm')
+              cmdStr = cmdStr + ` ${cmd.args.slice(0, 2).join(' ')}`;
+            else
+              cmdStr = cmdStr + ` ${cmd.args.slice(0, 1).join(' ')}`;
+          }
+
+          lines.push(colorize(`${cmdStr} recived signal ${signal} (${cmd.name}).`, 'dim'));
 
           if (cmd.process)
             cmd.process.emit('close', -9999, signal);
@@ -645,7 +684,6 @@ export class Spawnmon {
         // could write to stdin or line by line but
         // these ends up a bit cleaner in term IMO.
         const output = ('\n' + lines.join('\n'));
-
         this.log(output);
 
       });

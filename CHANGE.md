@@ -1,3 +1,10 @@
+## 20201.18.04
+
+- Add feature allowing "spawnmon" key in package.json to contain global spawnmon options.
+- Add feature allowing "spawnmon.json" to be used for global options.
+- Fix command name issue. If npm, yarn or pnpm should be first or second arg when logging.
+- Fix condensed logging output.
+
 ## 20201.17.04
 
 - Add npm scripts globstar feature build:* will run all builds for example.
