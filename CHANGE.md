@@ -4,6 +4,7 @@
 - Add feature allowing "spawnmon.json" to be used for global options.
 - Fix command name issue. If npm, yarn or pnpm should be first or second arg when logging.
 - Fix condensed logging output.
+- Fix issue where missing group doesn't fallback to command name for prefixing.
 
 ## 20201.17.04
 

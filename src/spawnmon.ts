@@ -210,7 +210,7 @@ export class Spawnmon {
       pid: cmd.pid,
       command: cmdName,
       timestamp: this.options.onTimestamp(),
-      group: this.getCommandGroups(cmd, true)
+      group: this.getCommandGroups(cmd, true) || cmdName
     };
 
     // Just replace template if not group or command.
@@ -427,8 +427,7 @@ export class Spawnmon {
   getCommandGroups(command: Command, first = false) {
     const groups = [] as string[];
     for (const k in this.groups) {
-      const group = this.groups[k];
-      if (~group.indexOf(command))
+      if (this.groups[k].includes(command))
         groups.push(k);
     }
     if (first)
