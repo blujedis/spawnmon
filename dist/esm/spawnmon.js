@@ -78,7 +78,7 @@ export class Spawnmon {
     padPrefix(prefix, offset, align = this.options.prefixAlign) {
         if (offset <= 0)
             return prefix; // nothing to do.
-        const fill = this.options.prefixFill;
+        const fill = this.options.prefixFill.charAt(0);
         if (align === 'right')
             prefix = fill.repeat(offset) + prefix;
         else if (align === 'center')
